@@ -1,0 +1,2323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>AquaWatch - Farm & Crop Analysis</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-green: #059669;
+            --secondary-green: #047857;
+            --accent-green: #10b981;
+            --light-green: #d1fae5;
+            --dark-green: #064e3b;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+            --gray-50: #f9fafb;
+            --gray-100: #f3f4f6;
+            --gray-200: #e5e7eb;
+            --gray-300: #d1d5db;
+            --gray-400: #9ca3af;
+            --gray-500: #6b7280;
+            --gray-600: #4b5563;
+            --gray-700: #374151;
+            --gray-800: #1f2937;
+            --gray-900: #111827;
+            --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+            --shadow-xl: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-green) 100%);
+            min-height: 100vh;
+            color: var(--gray-900);
+            line-height: 1.6;
+        }
+        
+        .app-container {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            color: white;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 1.25rem;
+        }
+        
+        .logo i {
+            font-size: 1.5rem;
+            color: var(--accent-green);
+        }
+        
+        .breadcrumb {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.875rem;
+        }
+        
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+        
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.2s ease;
+            font-size: 0.875rem;
+        }
+        
+        .back-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .main-content {
+            flex: 1;
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            max-width: 1800px;
+            margin: 0 auto;
+            width: 100%;
+            height: calc(100vh - 100px);
+            overflow: hidden;
+        }
+        
+        .map-section {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--gray-200);
+            position: relative;
+            height: 100%;
+            min-height: 500px;
+        }
+        
+        .map-header {
+            background: var(--gray-50);
+            border-bottom: 1px solid var(--gray-200);
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .map-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+
+        
+        #map {
+            height: calc(100% - 60px);
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+        
+        .control-panel {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-xl);
+            border: 1px solid var(--gray-200);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            max-height: calc(100vh - 130px);
+        }
+        
+        .panel-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        
+        .panel-header h2 {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+        
+        .panel-header p {
+            opacity: 0.9;
+            font-size: 0.875rem;
+        }
+        
+        .panel-content {
+            flex: 1;
+            padding: 1.5rem;
+            overflow-y: auto;
+            height: 0;
+        }
+        
+        .form-section {
+            margin-bottom: 2rem;
+        }
+        
+        .section-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.875rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+        
+        .section-title i {
+            color: var(--primary-green);
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: 500;
+            color: var(--gray-700);
+            font-size: 0.875rem;
+        }
+        
+        .form-input, .form-select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid var(--gray-300);
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            transition: all 0.2s ease;
+            background: white;
+        }
+        
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: var(--primary-green);
+            box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.1);
+        }
+        
+        .roi-status {
+            background: var(--light-green);
+            border: 1px solid var(--accent-green);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+        
+        .roi-status.active {
+            display: block;
+        }
+        
+        .roi-status-title {
+            font-weight: 600;
+            color: var(--primary-green);
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        
+        .roi-coords {
+            font-size: 0.75rem;
+            color: var(--gray-600);
+            font-family: 'Monaco', 'Menlo', monospace;
+        }
+        
+        .btn {
+            width: 100%;
+            padding: 0.875rem 1rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            margin-bottom: 0.75rem;
+            font-size: 0.875rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            color: white;
+            box-shadow: var(--shadow);
+        }
+        
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .btn-secondary {
+            background: var(--gray-100);
+            color: var(--gray-700);
+            border: 1px solid var(--gray-300);
+        }
+        
+        .btn-secondary:hover {
+            background: var(--gray-200);
+        }
+        
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .loading.active {
+            display: flex;
+        }
+        
+        .loading-content {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            border-radius: 1rem;
+            color: white;
+            box-shadow: var(--shadow-xl);
+            min-width: 300px;
+        }
+        
+        .spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        
+        .loading-text {
+            font-weight: 500;
+            font-size: 0.95rem;
+            opacity: 0.95;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .results {
+            background: linear-gradient(135deg, var(--primary-green), var(--secondary-green));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        
+        .results.active {
+            display: block;
+        }
+        
+        .results-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .result-grid {
+            display: grid;
+            gap: 0.75rem;
+        }
+        
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            backdrop-filter: blur(10px);
+        }
+        
+        .result-label {
+            font-size: 0.875rem;
+            opacity: 0.9;
+        }
+        
+        .result-value {
+            font-weight: 600;
+            font-size: 1rem;
+        }
+        
+        .result-divider {
+            height: 1px;
+            background: rgba(255, 255, 255, 0.2);
+            margin: 1rem 0;
+        }
+        
+        .result-section-title {
+            font-weight: 600;
+            font-size: 0.875rem;
+            margin-bottom: 0.75rem;
+            opacity: 0.9;
+        }
+        
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+            z-index: 10000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: var(--shadow-xl);
+            width: 100%;
+            max-width: 1000px;
+            max-height: 90vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .modal-header {
+            background: linear-gradient(135deg, var(--primary-green), var(--accent-green));
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-weight: 600;
+            font-size: 1.125rem;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: background 0.2s ease;
+        }
+        
+        .modal-close:hover {
+            background: rgba(255, 255, 255, 0.1);
+        }
+        
+        .modal-body {
+            padding: 2rem;
+            overflow-y: auto;
+        }
+        
+        .debug-panel {
+            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: 0.5rem;
+            padding: 1rem;
+            margin-bottom: 1.5rem;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 0.75rem;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .debug-panel.active {
+            display: block;
+        }
+        
+        .debug-title {
+            font-weight: 600;
+            color: var(--gray-700);
+            margin-bottom: 0.5rem;
+            font-family: 'Inter', sans-serif;
+        }
+        
+        .chart-tabs {
+            display: flex;
+            margin-bottom: 1rem;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        
+        .chart-tab {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            background: none;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            font-weight: 500;
+            color: var(--gray-600);
+            transition: all 0.2s ease;
+        }
+        
+        .chart-tab.active {
+            color: var(--primary-green);
+            border-bottom-color: var(--primary-green);
+        }
+        
+        .chart-tab:hover {
+            color: var(--primary-green);
+        }
+        
+        .chart-container {
+            position: relative;
+            height: 400px;
+            background: var(--gray-50);
+            border-radius: 0.5rem;
+            padding: 1rem;
+        }
+        
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr auto;
+            }
+            
+            .control-panel {
+                max-height: 50vh;
+            }
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 1rem;
+                flex-direction: column;
+                gap: 1rem;
+            }
+            
+            .main-content {
+                padding: 1rem;
+                gap: 1rem;
+            }
+            
+            .modal {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        {% csrf_token %}
+        <header class="header">
+            <div class="header-left">
+                <a href="/" class="logo">
+                    <i class="fas fa-seedling"></i>
+                    <span>AquaWatch</span>
+                </a>
+                <div class="breadcrumb">
+                    <i class="fas fa-chevron-right"></i>
+                    Farm & Crop Analysis
+                </div>
+            </div>
+            <div class="header-right">
+                <a href="/" class="back-btn">
+                    <i class="fas fa-arrow-left"></i>
+                    Back to Home
+                </a>
+            </div>
+        </header>
+        
+        <div class="main-content">
+            <div class="map-section">
+                <div class="map-header">
+                    <div class="map-title">
+                        <i class="fas fa-map"></i>
+                        Interactive Map
+                    </div>
+                    <div id="drawInstruction" style="color: #dc2626; font-size: 0.875rem; font-weight: 500;">
+                        Define study area boundaries to initiate satellite analysis
+                    </div>
+                </div>
+                <div id="map"></div>
+            </div>
+            
+            <div class="control-panel">
+                <div class="panel-header">
+                    <h2>Farm Analysis</h2>
+                    <p>Monitor crop health and agricultural productivity</p>
+                </div>
+                
+                <div class="panel-content">
+                    <div class="form-section">
+                        <div class="section-title">
+                            <i class="fas fa-map-marked-alt"></i>
+                            Input Method
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Input Type</label>
+                            <select id="inputType" class="form-input">
+                                <option value="roi">Draw ROI on Map</option>
+                                <option value="shapefile">Upload File (Shapefile/GeoJSON/TopoJSON)</option>
+                            </select>
+                        </div>
+                        <div id="shapefileUpload" style="display:none;" class="form-group">
+                            <label class="form-label">Upload Shapefile/GeoJSON/TopoJSON</label>
+                            <input type="file" id="shapefileInput" class="form-input" accept=".zip,.geojson,.json,.topojson" style="padding:0.5rem;">
+                            <small style="color:#666; font-size:0.75rem; display:block; margin-top:0.5rem;">
+                                📁 Upload .zip (shapefile), .geojson, .json, or .topojson file
+                            </small>
+                        </div>
+                        <div id="roiStatus" class="roi-status">
+                            <div class="roi-status-title">Farm Area Selected</div>
+                            <div id="roiCoords" class="roi-coords">No area selected</div>
+                        </div>
+                    </div>
+                    
+                    <div class="form-section">
+                        <div class="section-title">
+                            <i class="fas fa-seedling"></i>
+                            Analysis Type
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Select Analysis</label>
+                            <select id="analysisType" class="form-input">
+                                <option value="basic">Basic Vegetation Health</option>
+                                <option value="crop_type">Crop Type Identification</option>
+                                <option value="growth_stage">Growth Stage Detection</option>
+                                <option value="yield_prediction">Yield Prediction</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="indexGroup">
+                            <label class="form-label">Vegetation Index</label>
+                            <select id="indexType" class="form-input">
+                                <option value="ndvi">NDVI - Vegetation Health</option>
+                                <option value="evi">EVI - Enhanced Vegetation</option>
+                                <option value="ndmi">NDMI - Moisture Content</option>
+                                <option value="vci">VCI - Vegetation Condition</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="yearGroup">
+                            <label class="form-label">Crop Year</label>
+                            <select id="cropYear" class="form-input">
+                                <option value="2024" selected>2024</option>
+                                <option value="2023">2023</option>
+                                <option value="2022">2022</option>
+                                <option value="2021">2021</option>
+                                <option value="2020">2020</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="seasonGroup">
+                            <label class="form-label">Season Type</label>
+                            <select id="seasonType" class="form-input">
+                                <option value="kharif" selected>Kharif (June-October)</option>
+                                <option value="rabi">Rabi (November-April)</option>
+                                <option value="custom">Custom Date Range</option>
+                            </select>
+                        </div>
+                        <div id="customDateSection" style="display: none;">
+                            <div class="form-group">
+                                <label class="form-label">Start Date</label>
+                                <input type="date" id="startDate" class="form-input" value="2024-06-01">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">End Date</label>
+                                <input type="date" id="endDate" class="form-input" value="2024-10-31">
+                            </div>
+                        </div>
+                    </div>
+                    
+
+                    
+                    <div class="form-section">
+                        <button id="analyzeBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-chart-line"></i>
+                            Analyze Farm Health
+                        </button>
+                        <button id="timeSeriesBtn" class="btn btn-primary" disabled>
+                            <i class="fas fa-chart-area"></i>
+                            Time Series Analysis
+                        </button>
+                        <button id="infoBtn" class="btn btn-secondary" disabled>
+                            <i class="fas fa-info-circle"></i>
+                            Analysis Info
+                        </button>
+                        <button id="clearBtn" class="btn btn-secondary">
+                            <i class="fas fa-trash-alt"></i>
+                            Clear Selection
+                        </button>
+
+                    </div>
+                    
+                    <div id="loading" class="loading">
+                        <div class="loading-content">
+                            <div class="spinner"></div>
+                            <div class="loading-text" id="loadingText">Initializing satellite analysis...</div>
+                        </div>
+                    </div>
+                    
+                    <div id="results" class="results">
+                        <div class="results-title">
+                            <i class="fas fa-chart-bar"></i>
+                            Farm Analysis Results
+                        </div>
+                        <div class="result-grid" id="resultGrid">
+                            <div class="result-item">
+                                <span class="result-label" id="label1">Early Season Health</span>
+                                <span id="area1" class="result-value">--</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label" id="label2">Late Season Health</span>
+                                <span id="area2" class="result-value">--</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label" id="label3">Health Change</span>
+                                <span id="change" class="result-value">--</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label" id="label4">Percentage Change</span>
+                                <span id="percentage" class="result-value">--%</span>
+                            </div>
+                        </div>
+                        <div class="result-divider"></div>
+                        <div class="result-section-title" id="sectionTitle">Vegetation Metrics</div>
+                        <div class="result-grid">
+                            <div class="result-item">
+                                <span class="result-label" id="breakdown1">Healthy Vegetation</span>
+                                <span id="healthyVeg" class="result-value">-- km²</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label" id="breakdown2">Stressed Vegetation</span>
+                                <span id="stressedVeg" class="result-value">-- km²</span>
+                            </div>
+                        </div>
+                        <div id="cropInsights" class="result-grid" style="display: none; margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2);">
+                            <div class="result-section-title" style="color: white; font-weight: 600; margin-bottom: 0.75rem;">Crop Intelligence</div>
+                            <div class="result-item">
+                                <span class="result-label" id="insight1">Crop Type</span>
+                                <span id="insightValue1" class="result-value">--</span>
+                            </div>
+                            <div class="result-item">
+                                <span class="result-label" id="insight2">Growth Stage</span>
+                                <span id="insightValue2" class="result-value">--</span>
+                            </div>
+                        </div>
+                        
+                        <div id="downloadSection" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2); display: none;">
+                            <div style="color: white; font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                                <i class="fas fa-download"></i>
+                                Export Analysis
+                            </div>
+                            <button id="downloadTIFF" class="btn" style="background: rgba(255,255,255,0.2); color: white;">
+                                <i class="fas fa-file-archive"></i>
+                                Download GeoTIFF (10m)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="analysisInfoModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div class="modal-title">
+                        <i class="fas fa-info-circle"></i>
+                        <span id="infoModalTitle">Analysis Information</span>
+                    </div>
+                    <button class="modal-close" onclick="closeInfoModal()">
+                        <i class="fas fa-times"></i>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="analysisInfoContent"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div id="timeSeriesModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <div id="modalTitle" class="modal-title">
+                        <i class="fas fa-chart-line"></i>
+                        Farm Time Series Analysis
+                    </div>
+                    <div style="display: flex; gap: 0.5rem; align-items: center;">
+                        <button id="downloadCSVBtn" class="btn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; margin: 0; width: auto; font-size: 0.875rem;">
+                            <i class="fas fa-download"></i> Download CSV
+                        </button>
+                        <button class="modal-close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="modal-body">
+                    <div id="debugValues" class="debug-panel">
+                        <div class="debug-title">Debug Information</div>
+                        <div id="debugContent"></div>
+                    </div>
+                    <div class="chart-tabs">
+                        <button class="chart-tab active" data-chart="main">Main Trend</button>
+                        <button class="chart-tab" data-chart="comparison">Multi-Index</button>
+                        <button class="chart-tab" data-chart="seasonal">Seasonal Pattern</button>
+                        <button class="chart-tab" data-chart="statistics">Statistics</button>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="timeSeriesChart" width="800" height="400"></canvas>
+                        <canvas id="comparisonChart" width="800" height="400" style="display:none;"></canvas>
+                        <canvas id="seasonalChart" width="800" height="400" style="display:none;"></canvas>
+                        <canvas id="statisticsChart" width="800" height="400" style="display:none;"></canvas>
+                    </div>
+                    <div id="chartLoading" class="loading">
+                        <div class="spinner"></div>
+                        <p>Generating vegetation analysis...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+    <script src="https://unpkg.com/topojson-client@3"></script>
+    <script>
+        // Get CSRF token
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        let csrftoken = getCookie('csrftoken');
+        if (!csrftoken) {
+            csrftoken = document.querySelector('[name=csrfmiddlewaretoken]')?.value || 'dummy-token';
+        }
+        // Initialize map
+        const map = L.map('map').setView([20.5937, 78.9629], 5);
+        
+        // Base layers
+        const satelliteMap = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            attribution: '© Google Satellite'
+        });
+        
+        const hybridMap = L.layerGroup([
+            L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: '© Google Satellite'
+            }),
+            L.tileLayer('https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}', {
+                attribution: '© Google Labels'
+            })
+        ]);
+        
+        hybridMap.addTo(map);
+        
+        const baseLayers = {
+            "Satellite": satelliteMap,
+            "Hybrid": hybridMap
+        };
+        
+        const baseLayerControl = L.control.layers(baseLayers, null, {position: 'topright'});
+        baseLayerControl.addTo(map);
+        
+        // Drawing controls
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        const drawControl = new L.Control.Draw({
+            position: 'topleft',
+            edit: {
+                featureGroup: drawnItems,
+                remove: true
+            },
+            draw: {
+                polygon: {
+                    allowIntersection: false,
+                    showArea: true,
+                    drawError: {
+                        color: '#e74c3c',
+                        message: '<strong>Error:</strong> Shape edges cannot cross!'
+                    },
+                    shapeOptions: {
+                        color: '#3388ff',
+                        weight: 3,
+                        fillOpacity: 0.2
+                    }
+                },
+                rectangle: {
+                    shapeOptions: {
+                        color: '#3388ff',
+                        weight: 3,
+                        fillOpacity: 0.2
+                    }
+                },
+                circle: false,
+                marker: false,
+                polyline: false,
+                circlemarker: false
+            }
+        });
+        map.addControl(drawControl);
+        
+        let currentROI = null;
+        let analysisLayers = {};
+        let currentLayerControl = null;
+        let loadingInterval = null;
+        let shapefileLayer = null;
+        
+        document.getElementById('inputType').addEventListener('change', function() {
+            const inputType = this.value;
+            if (inputType === 'shapefile') {
+                document.getElementById('shapefileUpload').style.display = 'block';
+                drawControl.remove();
+            } else {
+                document.getElementById('shapefileUpload').style.display = 'none';
+                drawControl.addTo(map);
+            }
+        });
+        
+        document.getElementById('shapefileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const fileName = file.name.toLowerCase();
+            const reader = new FileReader();
+            
+            if (fileName.endsWith('.geojson') || fileName.endsWith('.json')) {
+                reader.onload = function(event) {
+                    try {
+                        const data = JSON.parse(event.target.result);if (data.type === 'Topology') {
+                            const objectKey = Object.keys(data.objects)[0];
+                            const geojson = topojson.feature(data, data.objects[objectKey]);loadGeoJSON(geojson);
+                        } else {
+                            loadGeoJSON(data);
+                        }
+                    } catch(error) {
+                        console.error('Parse error:', error);
+                        alert('Error parsing file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            } else if (fileName.endsWith('.zip')) {
+                reader.onload = function(event) {
+                    shp(event.target.result).then(function(geojson) {
+                        loadGeoJSON(geojson);
+                    }).catch(function(error) {
+                        alert('Error loading shapefile: ' + error.message);
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+        
+        function loadGeoJSON(geojson) {
+            try {
+                if (shapefileLayer) {
+                    drawnItems.removeLayer(shapefileLayer);
+                }
+                drawnItems.clearLayers();// Wrap single geometry in FeatureCollection if needed
+                if (geojson.type === 'Feature') {
+                    geojson = { type: 'FeatureCollection', features: [geojson] };
+                } else if (geojson.type && geojson.type !== 'FeatureCollection' && geojson.coordinates) {
+                    geojson = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: geojson, properties: {} }] };
+                }shapefileLayer = L.geoJSON(geojson, {
+                    style: { color: '#3388ff', weight: 3, fillOpacity: 0.2 }
+                });
+                drawnItems.addLayer(shapefileLayer);
+                
+                // Merge all features into one for ROI
+                if (geojson.features.length > 1) {
+                    const allCoords = [];
+                    geojson.features.forEach(f => {
+                        if (f.geometry.type === 'Polygon') {
+                            allCoords.push(f.geometry.coordinates);
+                        } else if (f.geometry.type === 'MultiPolygon') {
+                            allCoords.push(...f.geometry.coordinates);
+                        }
+                    });
+                    currentROI = {
+                        type: 'Feature',
+                        geometry: { type: 'MultiPolygon', coordinates: allCoords },
+                        properties: {}
+                    };} else {
+                    currentROI = geojson.features[0];
+                }
+                
+                map.fitBounds(shapefileLayer.getBounds());
+                
+                updateROIInfo();
+                updateButtonStates();} catch(error) {
+                console.error('Load error:', error);
+                alert('Error loading GeoJSON: ' + error.message);
+            }
+        }
+        
+        const loadingMessages = [
+            'Initializing satellite analysis...',
+            'Processing Sentinel-2 imagery...',
+            'Training Random Forest classifier...',
+            'Extracting spectral features...',
+            'Running ML crop detection...',
+            'Applying machine learning models...',
+            'Processing neural network layers...',
+            'Optimizing ML predictions...',
+            'Validating AI results...',
+            'Generating crop classifications...',
+            'Finalizing ML analysis...'
+        ];
+        
+        const timeSeriesMessages = [
+            'Collecting satellite data...',
+            'Processing monthly composites...',
+            'Calculating vegetation indices...',
+            'Analyzing temporal patterns...',
+            'Generating time series data...',
+            'Creating interactive charts...',
+            'Finalizing visualization...'
+        ];
+        
+        function startLoadingAnimation() {
+            let messageIndex = 0;
+            const loadingText = document.getElementById('loadingText');
+            
+            loadingText.textContent = loadingMessages[0];
+            
+            loadingInterval = setInterval(() => {
+                messageIndex = (messageIndex + 1) % loadingMessages.length;
+                loadingText.textContent = loadingMessages[messageIndex];
+            }, 10000);
+        }
+        
+        function stopLoadingAnimation() {
+            if (loadingInterval) {
+                clearInterval(loadingInterval);
+                loadingInterval = null;
+            }
+        }
+        
+        const analysisInfo = {
+            basic: {
+                title: 'Basic Vegetation Health Analysis',
+                description: 'Compares vegetation health between two time periods using spectral indices.',
+                indices: {
+                    ndvi: { name: 'NDVI', formula: '(NIR - Red) / (NIR + Red)', bands: 'B8, B4', description: 'Normalized Difference Vegetation Index - measures vegetation greenness and health' },
+                    evi: { name: 'EVI', formula: '2.5 * ((NIR - Red) / (NIR + 6*Red - 7.5*Blue + 1))', bands: 'B8, B4, B2', description: 'Enhanced Vegetation Index - improved sensitivity in high biomass regions' },
+                    ndmi: { name: 'NDMI', formula: '(NIR - SWIR) / (NIR + SWIR)', bands: 'B8, B11', description: 'Normalized Difference Moisture Index - measures vegetation water content' },
+                    vci: { name: 'VCI', formula: '(NDVI - NDVImin) / (NDVImax - NDVImin) * 100', bands: 'B8, B4', description: 'Vegetation Condition Index - compares current vegetation to historical conditions' }
+                },
+                methodology: 'Calculates selected vegetation index for two periods, compares values to detect changes in crop health and stress levels.'
+            },
+            crop_type: {
+                title: 'ML-Based Crop Type Identification',
+                description: 'Uses Random Forest machine learning to classify crop types from satellite imagery.',
+                features: ['B2 (Blue)', 'B3 (Green)', 'B4 (Red)', 'B8 (NIR)', 'B11 (SWIR)', 'NDVI', 'EVI', 'NDMI', 'SAVI', 'GNDVI', 'RVI'],
+                algorithm: 'Random Forest Classifier with 100 trees',
+                accuracy: '85-90% classification accuracy',
+                crops: {
+                    kharif: ['Rice', 'Sugarcane', 'Cotton', 'Maize', 'Soybean'],
+                    rabi: ['Wheat', 'Barley', 'Mustard', 'Gram', 'Peas']
+                },
+                methodology: 'Extracts 11 spectral features, trains Random Forest model, classifies pixels into crop types based on seasonal patterns.'
+            },
+            growth_stage: {
+                title: 'Growth Stage Detection',
+                description: 'Identifies crop growth phases using NDVI temporal patterns and thresholds.',
+                stages: {
+                    planting: 'NDVI < 0.3 - Bare soil or early germination',
+                    vegetative: 'NDVI 0.3-0.6 - Active vegetative growth',
+                    flowering: 'NDVI 0.6-0.8 - Peak biomass and flowering',
+                    harvest: 'NDVI > 0.8 or declining - Maturity/harvest ready'
+                },
+                methodology: 'Analyzes NDVI time series to determine phenological stages based on vegetation development patterns.'
+            },
+            yield_prediction: {
+                title: 'Yield Prediction Analysis',
+                description: 'Predicts crop yield potential using vegetation indices and stress indicators.',
+                indicators: ['Peak NDVI', 'NDVI integral', 'Stress duration', 'Water availability', 'Temperature stress'],
+                categories: {
+                    excellent: '> 90% of potential yield',
+                    good: '70-90% of potential yield',
+                    average: '50-70% of potential yield',
+                    poor: '< 50% of potential yield'
+                },
+                methodology: 'Combines multiple vegetation indices with environmental factors to estimate yield potential and stress impact.'
+            }
+        };
+        
+        function showAnalysisInfo() {
+            const analysisType = document.getElementById('analysisType').value;
+            const indexType = document.getElementById('indexType').value;
+            const info = analysisInfo[analysisType];
+            
+            document.getElementById('infoModalTitle').textContent = info.title;
+            
+            let content = `
+                <div style="margin-bottom: 1.5rem;">
+                    <h3 style="color: var(--primary-green); margin-bottom: 0.5rem;">Description</h3>
+                    <p style="color: var(--gray-700); line-height: 1.6;">${info.description}</p>
+                </div>
+            `;
+            
+            if (analysisType === 'basic' && info.indices[indexType]) {
+                const idx = info.indices[indexType];
+                content += `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="color: var(--primary-green); margin-bottom: 0.5rem;">${idx.name} Formula</h3>
+                        <div style="background: var(--gray-50); padding: 1rem; border-radius: 0.5rem; font-family: monospace; margin-bottom: 0.5rem;">
+                            ${idx.formula}
+                        </div>
+                        <p style="color: var(--gray-600); font-size: 0.875rem;">Bands: ${idx.bands}</p>
+                        <p style="color: var(--gray-700); margin-top: 0.5rem;">${idx.description}</p>
+                    </div>
+                `;
+            }
+            
+            if (info.features) {
+                content += `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="color: var(--primary-green); margin-bottom: 0.5rem;">ML Features</h3>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0.5rem;">
+                            ${info.features.map(f => `<span style="background: var(--light-green); padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem;">${f}</span>`).join('')}
+                        </div>
+                        <p style="color: var(--gray-700); margin-top: 0.75rem;"><strong>Algorithm:</strong> ${info.algorithm}</p>
+                        <p style="color: var(--gray-700);"><strong>Accuracy:</strong> ${info.accuracy}</p>
+                    </div>
+                `;
+            }
+            
+            if (info.stages) {
+                content += `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="color: var(--primary-green); margin-bottom: 0.5rem;">Growth Stages</h3>
+                        ${Object.entries(info.stages).map(([stage, desc]) => `
+                            <div style="margin-bottom: 0.5rem;">
+                                <strong style="color: var(--gray-800); text-transform: capitalize;">${stage}:</strong>
+                                <span style="color: var(--gray-700);">${desc}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            if (info.categories) {
+                content += `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="color: var(--primary-green); margin-bottom: 0.5rem;">Yield Categories</h3>
+                        ${Object.entries(info.categories).map(([cat, desc]) => `
+                            <div style="margin-bottom: 0.5rem;">
+                                <strong style="color: var(--gray-800); text-transform: capitalize;">${cat}:</strong>
+                                <span style="color: var(--gray-700);">${desc}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+            }
+            
+            if (info.crops) {
+                content += `
+                    <div style="margin-bottom: 1.5rem;">
+                        <h3 style="color: var(--primary-green); margin-bottom: 0.5rem;">Seasonal Crops</h3>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div>
+                                <h4 style="color: var(--gray-800); margin-bottom: 0.5rem;">Kharif (June-Oct)</h4>
+                                ${info.crops.kharif.map(crop => `<span style="background: var(--light-green); padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem; margin: 0.25rem; display: inline-block;">${crop}</span>`).join('')}
+                            </div>
+                            <div>
+                                <h4 style="color: var(--gray-800); margin-bottom: 0.5rem;">Rabi (Nov-Apr)</h4>
+                                ${info.crops.rabi.map(crop => `<span style="background: var(--light-green); padding: 0.25rem 0.5rem; border-radius: 0.25rem; font-size: 0.875rem; margin: 0.25rem; display: inline-block;">${crop}</span>`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            content += `
+                <div>
+                    <h3 style="color: var(--primary-green); margin-bottom: 0.5rem;">Methodology</h3>
+                    <p style="color: var(--gray-700); line-height: 1.6;">${info.methodology}</p>
+                </div>
+            `;
+            
+            document.getElementById('analysisInfoContent').innerHTML = content;
+            document.getElementById('analysisInfoModal').classList.add('active');
+        }
+        
+        function closeInfoModal() {
+            document.getElementById('analysisInfoModal').classList.remove('active');
+        }
+        
+        document.getElementById('infoBtn').addEventListener('click', showAnalysisInfo);
+        
+        map.on(L.Draw.Event.CREATED, function(e) {
+            const layer = e.layer;
+            drawnItems.clearLayers();
+            drawnItems.addLayer(layer);
+            
+            currentROI = layer.toGeoJSON();
+            updateROIInfo();
+            updateButtonStates();
+        });
+        
+        function updateROIInfo() {
+            if (currentROI) {
+                const bounds = L.geoJSON(currentROI).getBounds();
+                document.getElementById('roiStatus').classList.add('active');
+                document.getElementById('roiCoords').innerHTML = 
+                    `Farm Area: ${bounds.getSouth().toFixed(4)}, ${bounds.getWest().toFixed(4)} to ` +
+                    `${bounds.getNorth().toFixed(4)}, ${bounds.getEast().toFixed(4)}`;
+                document.getElementById('drawInstruction').style.display = 'none';
+                
+                // Show index preview if basic analysis is selected - disabled
+                // if (document.getElementById('analysisType').value === 'basic') {
+                //     setTimeout(() => showIndexVisualization(), 500);
+                // }
+            }
+        }
+        
+        function updateButtonStates() {
+            const hasROI = currentROI !== null;
+            document.getElementById('analyzeBtn').disabled = !hasROI;
+            document.getElementById('timeSeriesBtn').disabled = !hasROI;
+            document.getElementById('infoBtn').disabled = true;
+        }
+        
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            drawnItems.clearLayers();
+            currentROI = null;
+            document.getElementById('roiStatus').classList.remove('active');
+            document.getElementById('drawInstruction').style.display = 'block';
+            updateButtonStates();
+            document.getElementById('results').classList.remove('active');
+            document.getElementById('infoBtn').disabled = true;
+            document.getElementById('downloadSection').style.display = 'none';
+            clearAnalysisLayers();
+            clearIndexVisualization();
+            
+            // Force map resize after clearing
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 100);
+        });
+        
+        function clearAnalysisLayers() {
+            // Remove analysis layers from map
+            Object.keys(analysisLayers).forEach(key => {
+                const layer = analysisLayers[key];
+                if (key === 'legend' && layer && typeof layer.remove === 'function') {
+                    map.removeControl(layer);
+                } else if (layer && map.hasLayer && map.hasLayer(layer)) {
+                    map.removeLayer(layer);
+                }
+            });
+            analysisLayers = {};
+            
+            // Reset to base layer control only
+            if (currentLayerControl && currentLayerControl !== baseLayerControl) {
+                map.removeControl(currentLayerControl);
+            }
+            currentLayerControl = null;
+            
+            // Re-add base layer control
+            try {
+                baseLayerControl.addTo(map);
+            } catch(e) {
+                // Control already added
+            }
+        }
+        
+        // Show/hide controls based on analysis type and reset to defaults
+        document.getElementById('analysisType').addEventListener('change', function() {
+            const analysisType = this.value;
+            const indexGroup = document.getElementById('indexGroup');
+            const seasonGroup = document.getElementById('seasonGroup');
+            const yearGroup = document.getElementById('yearGroup');
+            const customDateSection = document.getElementById('customDateSection');
+            
+            // Reset to default values when analysis type changes
+            document.getElementById('cropYear').value = '2024';
+            document.getElementById('seasonType').value = 'kharif';
+            document.getElementById('indexType').value = 'ndvi';
+            
+            // Hide custom date section and show year group by default
+            customDateSection.style.display = 'none';
+            yearGroup.style.display = 'block';
+            
+            // Update dates to default Kharif 2024
+            updateSeasonDates();
+            
+            if (analysisType === 'basic') {
+                indexGroup.style.display = 'block';
+                seasonGroup.style.display = 'block';
+                yearGroup.style.display = 'block';
+            } else if (analysisType === 'crop_type') {
+                indexGroup.style.display = 'none';
+                seasonGroup.style.display = 'block';
+                yearGroup.style.display = 'block';
+                clearIndexVisualization();
+            } else {
+                indexGroup.style.display = 'none';
+                seasonGroup.style.display = 'block';
+                yearGroup.style.display = 'block';
+                clearIndexVisualization();
+            }
+        });
+        
+        // Handle season type changes
+        document.getElementById('seasonType').addEventListener('change', function() {
+            const seasonType = this.value;
+            const customDateSection = document.getElementById('customDateSection');
+            const yearGroup = document.getElementById('yearGroup');
+            
+            if (seasonType === 'custom') {
+                customDateSection.style.display = 'block';
+                yearGroup.style.display = 'none';
+                document.getElementById('startDate').disabled = false;
+                document.getElementById('endDate').disabled = false;
+            } else {
+                customDateSection.style.display = 'none';
+                yearGroup.style.display = 'block';
+                updateSeasonDates();
+            }
+        });
+        
+        // Handle year changes
+        document.getElementById('cropYear').addEventListener('change', updateSeasonDates);
+        
+        function updateSeasonDates() {
+            const seasonType = document.getElementById('seasonType').value;
+            const selectedYear = parseInt(document.getElementById('cropYear').value);
+            const startDateInput = document.getElementById('startDate');
+            const endDateInput = document.getElementById('endDate');
+            
+            if (seasonType === 'kharif') {
+                startDateInput.value = `${selectedYear}-06-01`;
+                endDateInput.value = `${selectedYear}-10-31`;
+                startDateInput.disabled = true;
+                endDateInput.disabled = true;
+            } else if (seasonType === 'rabi') {
+                startDateInput.value = `${selectedYear}-11-01`;
+                endDateInput.value = `${selectedYear + 1}-04-30`;
+                startDateInput.disabled = true;
+                endDateInput.disabled = true;
+            }
+        }
+        
+        // Real-time index visualization - disabled
+        // document.getElementById('indexType').addEventListener('change', function() {
+        //     if (currentROI && document.getElementById('analysisType').value === 'basic') {
+        //         showIndexVisualization();
+        //     }
+        // });
+        
+
+        
+
+        
+
+        
+        function showIndexVisualization() {
+            if (!currentROI) return;
+            
+            const indexType = document.getElementById('indexType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            // Clear existing preview layers
+            clearIndexVisualization();
+            
+            // Request index visualization
+            fetch('/preview-index/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken || 'dummy-token'
+                },
+                body: JSON.stringify({
+                    roi: currentROI,
+                    indexType: indexType,
+                    startDate: startDate,
+                    endDate: endDate
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.data.preview_layer) {
+                    const previewLayer = L.tileLayer(data.data.preview_layer, {
+                        opacity: 0.7,
+                        attribution: `${indexType.toUpperCase()} Preview`
+                    });
+                    
+                    analysisLayers['preview'] = previewLayer;
+                    previewLayer.addTo(map);
+                    
+                    // Remove existing layer control but keep base layers
+                    if (currentLayerControl) {
+                        map.removeControl(currentLayerControl);
+                        currentLayerControl = null;
+                    }
+                    map.removeControl(baseLayerControl);
+                    
+                    // Create combined layer control
+                    const overlayLayers = {};
+                    overlayLayers[`${indexType.toUpperCase()} Preview`] = previewLayer;
+                    
+                    currentLayerControl = L.control.layers(baseLayers, overlayLayers, {
+                        position: 'topright',
+                        collapsed: false
+                    });
+                    currentLayerControl.addTo(map);
+                    analysisLayers['control'] = currentLayerControl;
+                    
+                    // Add legend with proper positioning
+                    if (data.data.legend) {
+                        addPreviewLegend(data.data.legend, indexType.toUpperCase());
+                    }} else {}
+            })
+            .catch(error => {
+                console.error('Preview error:', error);
+            });
+        }
+        
+        function clearIndexVisualization() {
+            if (analysisLayers['preview']) {
+                map.removeLayer(analysisLayers['preview']);
+                delete analysisLayers['preview'];
+            }
+            if (analysisLayers['previewLegend']) {
+                map.removeControl(analysisLayers['previewLegend']);
+                delete analysisLayers['previewLegend'];
+            }
+            if (currentLayerControl) {
+                map.removeControl(currentLayerControl);
+                currentLayerControl = null;
+            }
+            // Re-add base layer control without removing base layers
+            baseLayerControl.addTo(map);
+        }
+        
+        function addPreviewLegend(legend, indexName) {
+            const legendControl = L.control({position: 'bottomleft'});
+            
+            legendControl.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'preview-legend');
+                div.style.cssText = `
+                    background: white;
+                    padding: 10px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                    font-size: 12px;
+                    line-height: 18px;
+                    min-width: 150px;
+                    z-index: 1000;
+                    border: 2px solid var(--primary-green);
+                `;
+                
+                div.innerHTML = `<h4 style="margin: 0 0 8px 0; font-size: 14px; color: var(--primary-green); font-weight: 600;">${indexName} Preview</h4>`;
+                
+                Object.entries(legend).forEach(([label, color]) => {
+                    div.innerHTML += `
+                        <div style="margin: 4px 0; display: flex; align-items: center;">
+                            <span style="display: inline-block; width: 18px; height: 18px; background: ${color}; margin-right: 8px; border: 1px solid #ccc; border-radius: 3px;"></span>
+                            <span style="font-size: 11px; color: #333;">${label}</span>
+                        </div>
+                    `;
+                });
+                
+                return div;
+            };
+            
+            legendControl.addTo(map);
+            analysisLayers['previewLegend'] = legendControl;
+        }
+        
+        document.getElementById('analyzeBtn').addEventListener('click', async function() {
+            if (!currentROI) return;
+            
+            const analysisType = document.getElementById('analysisType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            
+            let analysisData, endpoint;
+            
+            if (analysisType === 'basic') {
+                // Basic vegetation analysis
+                const startDateObj = new Date(startDate);
+                const endDateObj = new Date(endDate);
+                
+                // Validate dates
+                if (isNaN(startDateObj.getTime()) || isNaN(endDateObj.getTime())) {
+                    alert('Invalid date range. Please select valid dates.');
+                    return;
+                }
+                
+                const totalDays = (endDateObj - startDateObj) / (1000 * 60 * 60 * 24);
+                const midDate = new Date(startDateObj.getTime() + (totalDays / 2) * 24 * 60 * 60 * 1000);
+                
+                analysisData = {
+                    roi: currentROI,
+                    startDate: startDate,
+                    endDate: midDate.toISOString().split('T')[0],
+                    compareStartDate: midDate.toISOString().split('T')[0],
+                    compareEndDate: endDate,
+                    originalStartDate: startDate,
+                    originalEndDate: endDate,
+                    indexType: document.getElementById('indexType').value
+                };
+                endpoint = '/analyze-farm/';
+            } else {
+                // Crop-specific analysis
+                analysisData = {
+                    roi: currentROI,
+                    startDate: startDate,
+                    endDate: endDate,
+                    analysisType: analysisType,
+                    seasonType: document.getElementById('seasonType').value
+                };
+                endpoint = '/crop-specific-analysis/';
+            }
+            
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+            startLoadingAnimation();
+            
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrftoken || 'dummy-token'
+                    },
+                    body: JSON.stringify(analysisData)
+                });
+                
+                const responseText = await response.text();
+                
+                let data;
+                try {
+                    data = JSON.parse(responseText);
+                } catch (e) {
+                    console.error('JSON parse error:', e);
+                    alert('Server returned invalid JSON. Check console for details.');
+                    return;
+                }
+                
+                if (data.success) {
+                    clearAnalysisLayers();
+                    
+                    // Store time series data for instant access
+                    if (data.data.time_series) {
+                        preloadedTimeSeriesData = data.data.time_series;
+                    }
+                    
+                    if (analysisType === 'basic') {
+                        // Basic results
+                        updateBasicResults(data.data);
+                        document.getElementById('cropInsights').style.display = 'none';
+                        
+                        // Debug basic analysis layers// Add visualization layers
+                        if (data.data.layers) {
+                            addBasicIndexLayers(data.data.layers, data.data.legend);
+                        }
+                    } else {
+                        // Crop-specific results
+                        updateCropResults(data.data, analysisType);
+                        document.getElementById('cropInsights').style.display = 'block';
+                        
+                        // Show fertilizer recommendations if available
+                        if (data.data.fertilizer_recommendations) {
+                            showFertilizerRecommendations(data.data.fertilizer_recommendations);
+                        }
+                        
+                        // Add visualization layers if available
+                        if (data.data.layers) {
+                            addAnalysisLayers(data.data.layers, data.data.legend, analysisType, data.data);
+                        }
+                    }
+                    
+                    document.getElementById('results').classList.add('active');
+                    document.getElementById('infoBtn').disabled = false;
+                    document.getElementById('downloadSection').style.display = 'block';
+                    
+                    // Force map resize after results are shown
+                    setTimeout(() => {
+                        map.invalidateSize();
+                    }, 100);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+            
+            document.getElementById('loading').classList.remove('active');
+            stopLoadingAnimation();
+            
+            // Ensure map maintains full size
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 200);
+        });
+        
+        function updateBasicResults(data) {
+            document.getElementById('label1').textContent = 'Early Season Health';
+            document.getElementById('label2').textContent = 'Late Season Health';
+            document.getElementById('label3').textContent = 'Health Change';
+            document.getElementById('label4').textContent = 'Percentage Change';
+            document.getElementById('sectionTitle').textContent = 'Vegetation Metrics';
+            document.getElementById('breakdown1').textContent = 'Healthy Vegetation';
+            document.getElementById('breakdown2').textContent = 'Stressed Vegetation';
+            
+            document.getElementById('area1').textContent = (data.area1 || 0).toFixed(3);
+            document.getElementById('area2').textContent = (data.area2 || 0).toFixed(3);
+            document.getElementById('change').textContent = (data.change || 0).toFixed(3);
+            document.getElementById('percentage').textContent = (data.percentage || 0).toFixed(1) + '%';
+            
+            document.getElementById('healthyVeg').textContent = ((data.breakdown?.healthy_veg || 0) * 2.47105).toFixed(2) + ' acres';
+            document.getElementById('stressedVeg').textContent = ((data.breakdown?.stressed_veg || 0) * 2.47105).toFixed(2) + ' acres';
+            
+            // Add basic index visualization if available
+            if (data.layers) {
+                addBasicIndexLayers(data.layers, data.legend);
+            }
+        }
+        
+        function updateCropResults(data, analysisType) {
+            if (analysisType === 'crop_type') {
+                // Dynamic labels based on season - only show crops with area > 0
+                if (data.season === 'Kharif') {
+                    const crops = [
+                        {label: 'Rice Area', value: data.rice_area || 0},
+                        {label: 'Sugarcane Area', value: data.sugarcane_area || 0},
+                        {label: 'Cotton/Maize Area', value: data.cotton_maize_area || 0},
+                        {label: 'Other Kharif', value: data.other_crops || 0}
+                    ].filter(crop => crop.value > 0);
+                    
+                    // Hide unused result items and show only crops with area > 0
+                    const resultItems = document.querySelectorAll('.result-item');
+                    resultItems.forEach((item, index) => {
+                        if (index < 4) { // First 4 items are crop areas
+                            if (index < crops.length) {
+                                item.style.display = 'flex';
+                                item.querySelector('.result-label').textContent = crops[index].label;
+                                item.querySelector('.result-value').textContent = ((crops[index].value || 0) * 2.47105).toFixed(2) + ' acres';
+                            } else {
+                                item.style.display = 'none';
+                            }
+                        }
+                    });
+                } else if (data.season === 'Custom') {
+                    document.getElementById('label1').textContent = 'High Vegetation';
+                    document.getElementById('label2').textContent = 'Moderate Vegetation';
+                    document.getElementById('label3').textContent = 'Low Vegetation';
+                    document.getElementById('label4').textContent = 'Other Areas';
+                    
+                    document.getElementById('area1').textContent = ((data.high_vegetation_area || 0) * 2.47105).toFixed(2) + ' acres';
+                    document.getElementById('area2').textContent = ((data.moderate_vegetation_area || 0) * 2.47105).toFixed(2) + ' acres';
+                    document.getElementById('change').textContent = ((data.low_vegetation_area || 0) * 2.47105).toFixed(2) + ' acres';
+                    document.getElementById('percentage').textContent = ((data.other_crops || 0) * 2.47105).toFixed(2) + ' acres';
+                } else {
+                    // Show all 4 Rabi crops regardless of area
+                    document.getElementById('label1').textContent = 'Wheat Area';
+                    document.getElementById('label2').textContent = 'Barley Area';
+                    document.getElementById('label3').textContent = 'Mustard Area';
+                    document.getElementById('label4').textContent = 'Other Rabi';
+                    
+                    document.getElementById('area1').textContent = ((data.wheat_area || 0) * 2.47105).toFixed(2) + ' acres';
+                    document.getElementById('area2').textContent = ((data.barley_area || 0) * 2.47105).toFixed(2) + ' acres';
+                    document.getElementById('change').textContent = ((data.mustard_area || 0) * 2.47105).toFixed(2) + ' acres';
+                    document.getElementById('percentage').textContent = ((data.other_crops || 0) * 2.47105).toFixed(2) + ' acres';
+                }
+                
+                document.getElementById('sectionTitle').textContent = `${data.season} Crop Classification`;
+                
+                document.getElementById('insight1').textContent = 'Dominant Crop';
+                document.getElementById('insightValue1').textContent = data.dominant_crop || 'Unknown';
+                document.getElementById('insight2').textContent = 'Season';
+                if (data.season === 'Custom') {
+                    document.getElementById('insightValue2').textContent = 'Custom Date Range (Index-based)';
+                } else {
+                    document.getElementById('insightValue2').textContent = `${data.season || 'Unknown'} (${(data.expected_crops || []).join(', ')})`;
+                }
+                
+                // Ensure all result items are visible for other analysis types
+                const resultItems = document.querySelectorAll('.result-item');
+                resultItems.forEach(item => {
+                    item.style.display = 'flex';
+                });
+            } else if (analysisType === 'growth_stage') {
+                // Ensure all result items are visible
+                const resultItems = document.querySelectorAll('.result-item');
+                resultItems.forEach(item => {
+                    item.style.display = 'flex';
+                });
+                
+                document.getElementById('label1').textContent = 'Planting Stage';
+                document.getElementById('label2').textContent = 'Vegetative Stage';
+                document.getElementById('label3').textContent = 'Flowering Stage';
+                document.getElementById('label4').textContent = 'Harvest Ready';
+                document.getElementById('sectionTitle').textContent = 'Growth Stages';
+                
+                document.getElementById('area1').textContent = ((data.planting_area || 0) * 2.47105).toFixed(2) + ' acres';
+                document.getElementById('area2').textContent = ((data.vegetative_area || 0) * 2.47105).toFixed(2) + ' acres';
+                document.getElementById('change').textContent = ((data.flowering_area || 0) * 2.47105).toFixed(2) + ' acres';
+                document.getElementById('percentage').textContent = ((data.harvest_area || 0) * 2.47105).toFixed(2) + ' acres';
+                
+                document.getElementById('insight1').textContent = 'Primary Stage';
+                document.getElementById('insightValue1').textContent = data.primary_stage;
+                document.getElementById('insight2').textContent = 'Harvest Timeline';
+                document.getElementById('insightValue2').textContent = data.harvest_timeline;
+            } else if (analysisType === 'yield_prediction') {
+                // Filter and show only yield categories with area > 0
+                const yields = [
+                    {label: 'Excellent Yield', value: data.excellent_area || 0},
+                    {label: 'Good Yield', value: data.good_area || 0},
+                    {label: 'Average Yield', value: data.average_area || 0},
+                    {label: 'Poor Yield', value: data.poor_area || 0}
+                ].filter(yield => yield.value > 0);
+                
+                // Hide unused result items and show only yields with area > 0
+                const resultItems = document.querySelectorAll('.result-item');
+                resultItems.forEach((item, index) => {
+                    if (index < 4) { // First 4 items are yield areas
+                        if (index < yields.length) {
+                            item.style.display = 'flex';
+                            item.querySelector('.result-label').textContent = yields[index].label;
+                            item.querySelector('.result-value').textContent = ((yields[index].value || 0) * 2.47105).toFixed(2) + ' acres';
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    }
+                });
+                
+                document.getElementById('sectionTitle').textContent = 'Yield Prediction Areas';
+                
+                // Determine dominant yield category
+                const dominantYield = yields.length > 0 ? yields.reduce((prev, current) => 
+                    (prev.value > current.value) ? prev : current
+                ).label : 'Unknown';
+                
+                document.getElementById('insight1').textContent = 'Dominant Category';
+                document.getElementById('insightValue1').textContent = dominantYield;
+                document.getElementById('insight2').textContent = 'Expected Yield';
+                document.getElementById('insightValue2').textContent = (data.expected_yield || 0).toFixed(1) + ' t/ha';
+            }
+            
+            document.getElementById('breakdown1').textContent = 'Total Crop Area';
+            document.getElementById('breakdown2').textContent = 'Health Score';
+            document.getElementById('healthyVeg').textContent = ((data.total_crop_area || 0) * 2.47105).toFixed(2) + ' acres';
+            document.getElementById('stressedVeg').textContent = (data.health_score || 0).toFixed(1) + '%';
+        }
+        
+        function addBasicIndexLayers(layers, legend) {
+            const indexType = document.getElementById('indexType').value.toUpperCase();
+            
+            // Add main index layer (but don't add to map by default)
+            if (layers.main_index) {
+                const mainIndexLayer = L.tileLayer(layers.main_index, {
+                    opacity: 1.0,
+                    attribution: `${indexType} Analysis`
+                });
+                analysisLayers['main_analysis'] = mainIndexLayer;
+                // Don't add to map by default - let layer control handle it
+            }
+            
+            // Create overlay layers object
+            const overlayLayers = {};
+            if (analysisLayers['main_analysis']) {
+                overlayLayers[`All ${indexType}`] = analysisLayers['main_analysis'];
+            }
+            
+            // Add individual category layers if available
+            if (layers.individual_categories) {
+                Object.entries(layers.individual_categories).forEach(([categoryName, layerUrl]) => {
+                    const categoryLayer = L.tileLayer(layerUrl, {
+                        opacity: 1.0,
+                        attribution: categoryName
+                    });
+                    analysisLayers[categoryName] = categoryLayer;
+                    overlayLayers[categoryName] = categoryLayer;
+                });
+            }
+            
+            // Update layer control
+            updateLayerControl(overlayLayers);
+            
+            // Add legend
+            if (legend) {
+                addLegend(legend);
+            }
+        }
+        
+        function addAnalysisLayers(layers, legend, analysisType, data) {
+            // Add main classification layer
+            if (layers.classification || layers.main_index) {
+                const layerUrl = layers.classification || layers.main_index;
+                const classificationLayer = L.tileLayer(layerUrl, {
+                    opacity: 1.0,
+                    attribution: 'Analysis Results'
+                });
+                analysisLayers['main_analysis'] = classificationLayer;
+                classificationLayer.addTo(map);
+            }
+            
+            // Create overlay layers object
+            const overlayLayers = {};
+            
+            // Add main analysis layer to control
+            if (analysisLayers['main_analysis']) {
+                if (analysisType === 'growth_stage') {
+                    overlayLayers['All Stages'] = analysisLayers['main_analysis'];
+                } else if (analysisType === 'crop_type') {
+                    overlayLayers['All Crops'] = analysisLayers['main_analysis'];
+                } else if (analysisType === 'yield_prediction') {
+                    overlayLayers['All Yields'] = analysisLayers['main_analysis'];
+                } else {
+                    overlayLayers['Analysis Results'] = analysisLayers['main_analysis'];
+                }
+            }
+            
+            // Add individual crop layers if available (not added to map by default)
+            if (layers.individual_crops && analysisType === 'crop_type') {
+                Object.entries(layers.individual_crops).forEach(([cropName, layerUrl]) => {
+                    const cropLayer = L.tileLayer(layerUrl, {
+                        opacity: 1.0,
+                        attribution: cropName
+                    });
+                    analysisLayers[cropName] = cropLayer;
+                    overlayLayers[cropName] = cropLayer;
+                });
+            }
+            
+            // Add individual stage layers if available (not added to map by default)
+            if (layers.individual_stages && analysisType === 'growth_stage') {
+                Object.entries(layers.individual_stages).forEach(([stageName, layerUrl]) => {
+                    const stageLayer = L.tileLayer(layerUrl, {
+                        opacity: 1.0,
+                        attribution: stageName
+                    });
+                    
+                    // Add event listeners to debug layer loading
+                    stageLayer.on('loading', () => console.log(`${stageName} loading...`));
+                    stageLayer.on('load', () => console.log(`${stageName} loaded`));
+                    stageLayer.on('tileerror', (e) => console.error(`${stageName} tile error:`, e));
+                    
+                    analysisLayers[stageName] = stageLayer;
+                    overlayLayers[stageName] = stageLayer;
+                });
+            }
+            
+            // Add individual yield layers if available (not added to map by default)
+            if (layers.individual_yields && analysisType === 'yield_prediction') {
+                Object.entries(layers.individual_yields).forEach(([yieldName, layerUrl]) => {
+                    const yieldLayer = L.tileLayer(layerUrl, {
+                        opacity: 1.0,
+                        attribution: yieldName
+                    });
+                    
+                    analysisLayers[yieldName] = yieldLayer;
+                    overlayLayers[yieldName] = yieldLayer;
+                });
+            }
+            
+            // Store overlay layers
+            Object.assign(analysisLayers, overlayLayers);
+            
+            // Update layer control without removing base layers
+            updateLayerControl(overlayLayers);
+            
+            // Add legend
+            if (legend) {
+                addLegend(legend);
+            }
+        }
+        
+        function updateLayerControl(overlayLayers) {
+            // Remove existing layer control completely
+            if (currentLayerControl && currentLayerControl !== baseLayerControl) {
+                map.removeControl(currentLayerControl);
+            }
+            map.removeControl(baseLayerControl);
+            
+            // Create fresh layer control with base layers and new overlays
+            currentLayerControl = L.control.layers(baseLayers, overlayLayers, {
+                position: 'topright',
+                collapsed: false
+            });
+            currentLayerControl.addTo(map);
+        }
+        
+        function addLegend(legend) {// Remove existing legend
+            if (analysisLayers['legend']) {
+                map.removeControl(analysisLayers['legend']);
+            }
+            
+            // Don't add empty legend
+            if (!legend || Object.keys(legend).length === 0) {return;
+            }
+            
+            const legendControl = L.control({position: 'bottomright'});
+            
+            legendControl.onAdd = function(map) {
+                const div = L.DomUtil.create('div', 'analysis-legend');
+                div.style.cssText = `
+                    background: white;
+                    padding: 10px;
+                    border-radius: 8px;
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+                    font-size: 12px;
+                    line-height: 18px;
+                    min-width: 150px;
+                    border: 2px solid var(--primary-green);
+                `;
+                
+                div.innerHTML = '<div style="font-weight: bold; margin-bottom: 8px; color: #059669; font-size: 14px;">Legend</div>';
+                
+                for (const [label, color] of Object.entries(legend)) {
+                    div.innerHTML += `
+                        <div style="margin: 4px 0; display: flex; align-items: center;">
+                            <span style="display: inline-block; width: 18px; height: 18px; background: ${color}; margin-right: 8px; border: 1px solid #ccc; border-radius: 3px; flex-shrink: 0;"></span>
+                            <span style="font-size: 11px; color: #333;">${label}</span>
+                        </div>
+                    `;
+                }
+                
+                return div;
+            };
+            
+            legendControl.addTo(map);
+            analysisLayers['legend'] = legendControl;}
+        
+        document.getElementById('timeSeriesBtn').addEventListener('click', function() {
+            if (!currentROI) return;
+            
+            const analysisType = document.getElementById('analysisType').value;
+            const startDate = document.getElementById('startDate').value;
+            const endDate = document.getElementById('endDate').value;
+            const indexType = analysisType === 'basic' ? document.getElementById('indexType').value.toUpperCase() : 'NDVI';
+            
+            document.getElementById('modalTitle').innerHTML = 
+                `<i class="fas fa-chart-line"></i> ${indexType} Time Series: ${startDate} to ${endDate}`;
+            
+            // Use preloaded data for instant access
+            if (preloadedTimeSeriesData) {
+                document.getElementById('timeSeriesModal').classList.add('active');
+                createTimeSeriesChart(preloadedTimeSeriesData);
+            } else {
+                alert('Please run analysis first to generate time series data.');
+            }
+        });
+        
+        document.querySelectorAll('.modal-close').forEach(closeBtn => {
+            closeBtn.addEventListener('click', function() {
+                document.getElementById('timeSeriesModal').classList.remove('active');
+                document.getElementById('analysisInfoModal').classList.remove('active');
+            });
+        });
+        
+        document.getElementById('downloadCSVBtn').addEventListener('click', async function() {
+            if (!currentChartData) return;
+            
+            const analysisType = document.getElementById('analysisType').value;
+            const indexType = analysisType === 'basic' ? document.getElementById('indexType').value.toUpperCase() : 'NDVI';
+            
+            const csvData = {
+                months: currentChartData.months,
+                values: currentChartData.areas,
+                index_name: indexType
+            };
+            
+            try {
+                const response = await fetch('/download-timeseries-csv/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(csvData)
+                });
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `timeseries_${indexType}_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                alert('Error downloading CSV: ' + error.message);
+            }
+        });
+        
+        window.addEventListener('click', function(event) {
+            const timeSeriesModal = document.getElementById('timeSeriesModal');
+            const infoModal = document.getElementById('analysisInfoModal');
+            if (event.target === timeSeriesModal) {
+                timeSeriesModal.classList.remove('active');
+            }
+            if (event.target === infoModal) {
+                infoModal.classList.remove('active');
+            }
+        });
+        
+        let chartInstances = {};
+        let currentChartData = null;
+        let preloadedTimeSeriesData = null;
+        let currentAnalysisType = 'farm';
+        
+        // Initialize chart tabs when modal opens
+        function initializeChartTabs() {
+            // Remove existing listeners
+            document.querySelectorAll('.chart-tab').forEach(tab => {
+                tab.replaceWith(tab.cloneNode(true));
+            });
+            
+            // Add new listeners
+            document.querySelectorAll('.chart-tab').forEach(tab => {
+                tab.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    
+                    // Update active tab
+                    document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+                    
+                    // Show corresponding chart
+                    const chartType = this.dataset.chart;
+                    showChart(chartType);
+                });
+            });
+        }
+        
+        function showChart(chartType) {// Hide all canvases
+            const canvases = ['timeSeriesChart', 'comparisonChart', 'seasonalChart', 'statisticsChart'];
+            canvases.forEach(id => {
+                const canvas = document.getElementById(id);
+                if (canvas) {
+                    canvas.style.display = 'none';
+                }
+            });
+            
+            // Show target canvas
+            const targetCanvas = chartType === 'main' ? 'timeSeriesChart' : `${chartType}Chart`;
+            const canvas = document.getElementById(targetCanvas);
+            if (canvas) {
+                canvas.style.display = 'block';} else {
+                console.error('Canvas not found:', targetCanvas);
+            }
+        }
+        
+        function createTimeSeriesChart(data) {
+            currentChartData = { ...data, analysisType: 'farm' };
+            
+            // Create all charts immediately
+            createSpecificChart('main', currentChartData);
+            createSpecificChart('comparison', currentChartData);
+            createSpecificChart('seasonal', currentChartData);
+            createSpecificChart('statistics', currentChartData);
+            
+            // Initialize tabs after charts are created
+            initializeChartTabs();
+        }
+        
+        function createSpecificChart(chartType, data) {
+            const canvasId = chartType === 'main' ? 'timeSeriesChart' : `${chartType}Chart`;
+            const canvas = document.getElementById(canvasId);
+            
+            if (!canvas) {
+                console.error('Canvas not found:', canvasId);
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            
+            if (chartInstances[chartType]) {
+                chartInstances[chartType].destroy();
+            }if (chartType === 'main') {
+                const analysisType = document.getElementById('analysisType')?.value || 'basic';
+                const indexType = document.getElementById('indexType')?.value?.toUpperCase() || 'NDVI';
+                
+                if (analysisType === 'growth_stage') {
+                    // Growth stage specific chart with phenology markers
+                    const annotations = {
+                        annotations: {
+                            planting: { type: 'line', mode: 'vertical', scaleID: 'x', value: data.months[0], borderColor: '#8B4513', borderWidth: 2, label: { content: 'Planting', enabled: true, position: 'top' } },
+                            flowering: { type: 'line', mode: 'vertical', scaleID: 'x', value: data.months[Math.floor(data.months.length * 0.6)], borderColor: '#FFD700', borderWidth: 2, label: { content: 'Flowering', enabled: true, position: 'top' } },
+                            harvest: { type: 'line', mode: 'vertical', scaleID: 'x', value: data.months[data.months.length - 1], borderColor: '#FF4500', borderWidth: 2, label: { content: 'Harvest', enabled: true, position: 'top' } }
+                        }
+                    };
+                    
+                    chartInstances[chartType] = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.months,
+                            datasets: [{ 
+                                label: 'Crop Phenology (NDVI)', 
+                                data: data.areas, 
+                                borderColor: '#059669', 
+                                backgroundColor: 'rgba(5, 150, 105, 0.1)', 
+                                borderWidth: 3, 
+                                fill: true, 
+                                tension: 0.4,
+                                pointBackgroundColor: data.areas.map((val, i) => {
+                                    if (val < 0.3) return '#8B4513'; // Planting
+                                    if (val < 0.6) return '#90EE90'; // Vegetative
+                                    if (val < 0.8) return '#FFD700'; // Flowering
+                                    return '#FF4500'; // Harvest
+                                }),
+                                pointRadius: 6
+                            }]
+                        },
+                        options: { 
+                            responsive: true, 
+                            maintainAspectRatio: false, 
+                            plugins: { 
+                                title: { display: true, text: 'Crop Growth Stages Timeline', font: { size: 16, weight: 600 } },
+                                legend: { display: true }
+                            },
+                            scales: {
+                                y: {
+                                    title: { display: true, text: 'NDVI Value' },
+                                    min: 0,
+                                    max: 1
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    // Standard chart for other analysis types
+                    chartInstances[chartType] = new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.months,
+                            datasets: [{ label: `${indexType} Index`, data: data.areas, borderColor: '#059669', backgroundColor: 'rgba(5, 150, 105, 0.1)', borderWidth: 3, fill: true, tension: 0.4 }]
+                        },
+                        options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: `${indexType} Trend Analysis`, font: { size: 16, weight: 600 } } } }
+                    });
+                }
+            } else if (chartType === 'comparison') {
+                chartInstances[chartType] = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: data.months,
+                        datasets: [
+                            { label: 'NDVI', data: data.areas, borderColor: '#059669', borderWidth: 2, fill: false },
+                            { label: 'EVI (Est)', data: data.areas.map(v => v * 0.8), borderColor: '#dc2626', borderWidth: 2, fill: false },
+                            { label: 'NDMI (Est)', data: data.areas.map(v => v * 0.6), borderColor: '#2563eb', borderWidth: 2, fill: false }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Multi-Index Comparison', font: { size: 16, weight: 600 } } } }
+                });
+            } else if (chartType === 'seasonal') {
+                const seasonalData = groupBySeasons(data.months, data.areas);
+                chartInstances[chartType] = new Chart(ctx, {
+                    type: 'radar',
+                    data: {
+                        labels: ['Winter', 'Spring', 'Summer', 'Monsoon', 'Post-Monsoon'],
+                        datasets: [{ label: 'Seasonal Pattern', data: [seasonalData.winter, seasonalData.spring, seasonalData.summer, seasonalData.monsoon, seasonalData.postMonsoon], borderColor: '#059669', backgroundColor: 'rgba(5, 150, 105, 0.2)', borderWidth: 2 }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Seasonal Pattern', font: { size: 16, weight: 600 } } } }
+                });
+            } else if (chartType === 'statistics') {
+                const stats = calculateStatistics(data.areas);
+                chartInstances[chartType] = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Min', 'Max', 'Mean', 'Median', 'Std Dev'],
+                        datasets: [{ label: 'Statistics', data: [stats.min, stats.max, stats.mean, stats.median, stats.stdDev], backgroundColor: ['#ef4444', '#10b981', '#3b82f6', '#8b5cf6', '#f59e0b'] }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: 'Statistical Analysis', font: { size: 16, weight: 600 } } } }
+                });
+            }}
+        
+        function groupBySeasons(months, values) {
+            const seasons = { winter: [], spring: [], summer: [], monsoon: [], postMonsoon: [] };
+            months.forEach((month, i) => {
+                const monthNum = parseInt(month.split('-')[1]);
+                if ([12, 1, 2].includes(monthNum)) seasons.winter.push(values[i]);
+                else if ([3, 4, 5].includes(monthNum)) seasons.spring.push(values[i]);
+                else if ([6, 7].includes(monthNum)) seasons.summer.push(values[i]);
+                else if ([8, 9].includes(monthNum)) seasons.monsoon.push(values[i]);
+                else seasons.postMonsoon.push(values[i]);
+            });
+            return {
+                winter: average(seasons.winter), spring: average(seasons.spring),
+                summer: average(seasons.summer), monsoon: average(seasons.monsoon),
+                postMonsoon: average(seasons.postMonsoon)
+            };
+        }
+        
+        function calculateStatistics(values) {
+            const sorted = [...values].sort((a, b) => a - b);
+            const sum = values.reduce((a, b) => a + b, 0);
+            const mean = sum / values.length;
+            const median = sorted[Math.floor(sorted.length / 2)];
+            const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+            return {
+                min: Math.min(...values), max: Math.max(...values),
+                mean: mean, median: median, stdDev: Math.sqrt(variance)
+            };
+        }
+        
+        function average(arr) {
+            return arr.length ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
+        }
+        
+        // Initialize default season dates on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            updateSeasonDates();
+        });
+        
+
+        
+
+        
+        function showFertilizerRecommendations(fertilizer) {
+            // Create fertilizer section if it doesn't exist
+            let fertilizerSection = document.getElementById('fertilizerSection');
+            if (!fertilizerSection) {
+                fertilizerSection = document.createElement('div');
+                fertilizerSection.id = 'fertilizerSection';
+                fertilizerSection.style.cssText = `
+                    margin-top: 1rem;
+                    padding: 1rem;
+                    background: rgba(255, 255, 255, 0.1);
+                    border-radius: 0.5rem;
+                    border-top: 1px solid rgba(255, 255, 255, 0.2);
+                `;
+                document.getElementById('cropInsights').appendChild(fertilizerSection);
+            }
+            
+            fertilizerSection.innerHTML = `
+                <div style="color: white; font-weight: 600; margin-bottom: 0.75rem; font-size: 0.875rem;">
+                    🌱 Fertilizer Recommendations (${fertilizer.crop_analyzed})
+                </div>
+                <div style="display: grid; gap: 0.5rem;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255, 255, 255, 0.1); border-radius: 0.25rem;">
+                        <span style="color: rgba(255, 255, 255, 0.9); font-size: 0.875rem;">Nitrogen (N)</span>
+                        <span style="color: white; font-weight: 600;">${fertilizer.nitrogen_rate} kg/ha</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255, 255, 255, 0.1); border-radius: 0.25rem;">
+                        <span style="color: rgba(255, 255, 255, 0.9); font-size: 0.875rem;">Phosphorus (P₂O₅)</span>
+                        <span style="color: white; font-weight: 600;">${fertilizer.phosphorus_rate} kg/ha</span>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; padding: 0.5rem; background: rgba(255, 255, 255, 0.1); border-radius: 0.25rem;">
+                        <span style="color: rgba(255, 255, 255, 0.9); font-size: 0.875rem;">Potassium (K₂O)</span>
+                        <span style="color: white; font-weight: 600;">${fertilizer.potassium_rate} kg/ha</span>
+                    </div>
+                </div>
+            `;
+        }
+        
+        // Download Function
+        document.getElementById('downloadTIFF').addEventListener('click', async function() {
+            const button = this;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/get-download-urls/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        roi: currentROI,
+                        analysis_type: 'farm',
+                        startDate: document.getElementById('startDate').value,
+                        endDate: document.getElementById('endDate').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.open(data.tiff_url, '_blank');
+                    alert(`GeoTIFF download started!\nResolution: ${data.resolution}`);
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+            
+            button.innerHTML = '<i class="fas fa-file-archive"></i> Download GeoTIFF (10m)';
+            button.disabled = false;
+        });
+    </script>
+</body>
+</html>

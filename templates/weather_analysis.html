@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Weather Analysis & Prediction</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css"/>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #ffd700 0%, #ff8c00 50%, #ff6347 100%); color: #333; }
+        .container { max-width: 1600px; margin: 0 auto; padding: 2rem; }
+        .header { background: rgba(255,255,255,0.95); padding: 1.5rem 2rem; border-radius: 1rem; margin-bottom: 2rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 2rem; color: #ff8c00; display: flex; align-items: center; gap: 1rem; }
+        .back-btn { background: linear-gradient(135deg, #ff8c00, #ff6347); color: white; border: none; padding: 0.75rem 1.5rem; border-radius: 0.5rem; cursor: pointer; font-size: 1rem; transition: all 0.3s; }
+        .back-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(255,140,0,0.4); }
+        .main-grid { display: grid; grid-template-columns: 1fr; gap: 2rem; max-width: 600px; margin: 0 auto; }
+        .control-panel { background: rgba(255,255,255,0.95); padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+        .search-wrapper { position: relative; }
+        .search-input-wrapper { position: relative; display: flex; align-items: center; }
+        .search-input-wrapper i { position: absolute; left: 1rem; color: #ff8c00; font-size: 1.1rem; }
+        .search-input-wrapper input { padding-left: 3rem !important; }
+        .search-results { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 2px solid #ff8c00; border-top: none; border-radius: 0 0 0.5rem 0.5rem; max-height: 300px; overflow-y: auto; z-index: 1000; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .search-result-item { padding: 0.75rem 1rem; cursor: pointer; border-bottom: 1px solid #f0f0f0; transition: all 0.2s; display: flex; align-items: center; gap: 0.75rem; }
+        .search-result-item:hover { background: #fff5e6; transform: translateX(4px); }
+        .search-result-item:last-child { border-bottom: none; }
+        .search-result-item .icon { color: #ff8c00; font-size: 1.2rem; }
+        .search-result-item .info { flex: 1; }
+        .search-result-item .name { font-weight: 600; color: #333; font-size: 0.95rem; }
+        .search-result-item .details { font-size: 0.8rem; color: #999; margin-top: 0.2rem; }
+        .popular-locations { padding: 0.75rem 1rem; background: #fff5e6; border-bottom: 2px solid #ff8c00; font-size: 0.85rem; color: #666; font-weight: 600; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #555; }
+        .form-group input, .form-group select { width: 100%; padding: 0.75rem; border: 2px solid #e0e0e0; border-radius: 0.5rem; font-size: 1rem; transition: border 0.3s; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: #ff8c00; }
+        .btn { width: 100%; padding: 1rem; background: linear-gradient(135deg, #ff8c00, #ff6347); color: white; border: none; border-radius: 0.5rem; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+        .btn:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(255,140,0,0.4); }
+        .btn:disabled { background: #ccc; cursor: not-allowed; transform: none; }
+        .results-section { background: rgba(255,255,255,0.95); padding: 2rem; border-radius: 1rem; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-top: 2rem; }
+        .forecast-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+        .forecast-card { background: linear-gradient(135deg, #fff5e6, #ffe6cc); padding: 1rem; border-radius: 0.75rem; text-align: center; border: 2px solid #ff8c00; }
+        .forecast-card .icon { font-size: 2.5rem; margin-bottom: 0.5rem; }
+        .forecast-card .date { font-size: 0.875rem; color: #666; margin-bottom: 0.5rem; font-weight: 600; }
+        .forecast-card .rainfall { font-size: 1.25rem; font-weight: 700; color: #ff8c00; margin-bottom: 0.5rem; }
+        .forecast-card .weather-detail { font-size: 0.8rem; color: #666; margin: 0.25rem 0; display: flex; align-items: center; justify-content: center; gap: 0.25rem; }
+        .forecast-card .weather-detail i { color: #ff8c00; font-size: 0.9rem; }
+        .prediction-box { background: linear-gradient(135deg, #fff5e6, #ffe6cc); padding: 1.5rem; border-radius: 0.75rem; border: 2px solid #ff8c00; margin: 1.5rem 0; }
+        .prediction-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 1rem; }
+        .prediction-item { text-align: center; }
+        .prediction-item .label { font-size: 0.875rem; color: #666; margin-bottom: 0.5rem; }
+        .prediction-item .value { font-size: 1.5rem; font-weight: 700; color: #ff8c00; }
+        .recommendations { margin-top: 1.5rem; }
+        .rec-section { margin-bottom: 1.5rem; }
+        .rec-section h4 { color: #ff8c00; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem; }
+        .rec-item { padding: 0.75rem; background: #fff5e6; border-left: 4px solid #ff8c00; margin-bottom: 0.5rem; border-radius: 0.25rem; }
+        .chart-container { height: 300px; margin-top: 1.5rem; }
+        .stats-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1rem; }
+        .stat-box { background: white; padding: 1rem; border-radius: 0.5rem; text-align: center; border: 2px solid #ff8c00; }
+        .stat-box .label { font-size: 0.875rem; color: #666; }
+        .stat-box .value { font-size: 1.75rem; font-weight: 700; color: #ff8c00; }
+        .loading { display: none; text-align: center; padding: 2rem; }
+        .loading.active { display: block; }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-cloud-sun-rain"></i> Weather Analysis & Prediction</h1>
+            <button class="back-btn" onclick="window.location.href='/'"><i class="fas fa-home"></i> Home</button>
+        </div>
+
+        <div class="main-grid">
+            <div class="control-panel">
+                <h3 style="margin-bottom: 1.5rem; color: #ff8c00;"><i class="fas fa-map-marker-alt"></i> Select Location</h3>
+                
+                <div class="form-group">
+                    <label><i class="fas fa-map-marker-alt"></i> Search Location</label>
+                    <div class="search-wrapper">
+                        <div class="search-input-wrapper">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="locationSearch" placeholder="Enter any city, state, or country..." autocomplete="off">
+                        </div>
+                        <div class="search-results" id="searchResults"></div>
+                    </div>
+                    <p style="font-size: 0.875rem; color: #666; margin-top: 0.5rem;">📍 Selected: <strong id="selectedLocation" style="color: #ff8c00;">None</strong></p>
+                </div>
+
+                <div class="form-group">
+                    <label><i class="fas fa-map"></i> Location Preview</label>
+                    <div id="previewMap" style="height: 250px; border-radius: 0.5rem; border: 2px solid #e0e0e0;"></div>
+                </div>
+
+                <button class="btn" id="analyzeBtn" onclick="analyzeWeather()">
+                    <i class="fas fa-cloud-sun"></i> Get Weather Forecast & Prediction
+                </button>
+
+                <div style="margin-top: 1.5rem; padding: 1rem; background: #fff5e6; border-radius: 0.5rem; border-left: 4px solid #ff8c00;">
+                    <h4 style="color: #ff8c00; margin-bottom: 0.5rem;"><i class="fas fa-info-circle"></i> How to Use</h4>
+                    <ul style="font-size: 0.875rem; color: #666; padding-left: 1.5rem;">
+                        <li>Type any location name</li>
+                        <li>Wait for suggestions</li>
+                        <li>Click to select location</li>
+                        <li>Analyze weather data</li>
+                    </ul>
+                </div>
+            </div>
+
+
+        </div>
+
+        <div class="results-section" id="resultsSection" style="display: none;">
+            <div class="loading" id="loading">
+                <i class="fas fa-spinner fa-spin" style="font-size: 3rem; color: #ff8c00;"></i>
+                <p style="margin-top: 1rem; color: #666;">Analyzing weather data...</p>
+            </div>
+
+            <div id="resultsContent" style="display: none;">
+                <h2 style="color: #ff8c00; margin-bottom: 1.5rem;"><i class="fas fa-chart-line"></i> Weather Analysis Results</h2>
+                
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="label">Location</div>
+                        <div class="value" id="locationCoords" style="font-size: 1rem;">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">7-Day Total</div>
+                        <div class="value" id="total7day">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">30-Day Prediction</div>
+                        <div class="value" id="total30day">-</div>
+                    </div>
+                </div>
+
+                <h3 style="color: #ff8c00; margin: 2rem 0 1rem;"><i class="fas fa-calendar-week"></i> 7-Day Weather Forecast</h3>
+                <div class="forecast-grid" id="forecastGrid"></div>
+
+                <h3 style="color: #ff8c00; margin: 2rem 0 1rem;"><i class="fas fa-brain"></i> AI-Powered 30-Day Prediction</h3>
+                <div class="prediction-box">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
+                        <h4 style="color: #ff8c00;">Weekly Breakdown</h4>
+                        <div style="font-size: 0.875rem; color: #666;">
+                            <i class="fas fa-chart-line"></i> Confidence: <strong id="confidence">-</strong>%
+                        </div>
+                    </div>
+                    <div class="prediction-grid">
+                        <div class="prediction-item">
+                            <div class="label">Week 1</div>
+                            <div class="value" id="week1">-</div>
+                        </div>
+                        <div class="prediction-item">
+                            <div class="label">Week 2</div>
+                            <div class="value" id="week2">-</div>
+                        </div>
+                        <div class="prediction-item">
+                            <div class="label">Week 3</div>
+                            <div class="value" id="week3">-</div>
+                        </div>
+                        <div class="prediction-item">
+                            <div class="label">Week 4</div>
+                            <div class="value" id="week4">-</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 style="color: #ff8c00; margin: 2rem 0 1rem;"><i class="fas fa-crystal-ball"></i> <span id="predictionTitle">Monthly Predictions</span></h3>
+                <div class="stats-row">
+                    <div class="stat-box">
+                        <div class="label" id="year1Label">Next Year</div>
+                        <div class="value" id="year1Pred">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label" id="year2Label">Year After</div>
+                        <div class="value" id="year2Pred">-</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="label">Trend</div>
+                        <div class="value" id="trendValue" style="font-size: 1.25rem;">-</div>
+                    </div>
+                </div>
+
+                <h3 style="color: #ff8c00; margin: 2rem 0 1rem;"><i class="fas fa-history"></i> Annual Rainfall History (20 Years)</h3>
+                <div class="chart-container">
+                    <canvas id="historicalChart"></canvas>
+                </div>
+
+                <h3 style="color: #ff8c00; margin: 2rem 0 1rem;"><i class="fas fa-calendar-alt"></i> <span id="monthlyChartTitle">Monthly Rainfall History (20 Years)</span></h3>
+                <div class="chart-container">
+                    <canvas id="monthlyChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedLocation = null;
+        let historicalChart, monthlyChart;
+        let searchTimeout;
+        let previewMap, previewMarker;
+
+        // Initialize preview map with hybrid/satellite view
+        previewMap = L.map('previewMap').setView([20.5937, 78.9629], 5);
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+            attribution: 'Esri, Maxar, Earthstar Geographics'
+        }).addTo(previewMap);
+        
+        // Add labels layer on top
+        L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+            attribution: ''
+        }).addTo(previewMap);
+        
+        // Custom red pin icon
+        const redPinIcon = L.divIcon({
+            className: 'custom-pin',
+            html: '<div style="font-size: 2.5rem; line-height: 1; transform: translateY(-50%);">📍</div>',
+            iconSize: [30, 42],
+            iconAnchor: [15, 42],
+            popupAnchor: [0, -42]
+        });
+
+        // Location search
+        const searchInput = document.getElementById('locationSearch');
+        
+        searchInput.addEventListener('input', function(e) {
+            clearTimeout(searchTimeout);
+            const query = e.target.value.trim();
+            
+            if (query.length < 2) {
+                document.getElementById('searchResults').style.display = 'none';
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => searchLocation(query), 200);
+        });
+
+        // Allow Enter key to search first result
+        searchInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                const firstResult = document.querySelector('.search-result-item:not(.no-click)');
+                if (firstResult && firstResult.onclick) {
+                    firstResult.onclick();
+                }
+            }
+        });
+
+        async function searchLocation(query) {
+            const resultsDiv = document.getElementById('searchResults');
+            resultsDiv.innerHTML = '<div class="search-result-item no-click"><div class="icon">⏳</div><div class="info"><div class="name">Searching...</div></div></div>';
+            resultsDiv.style.display = 'block';
+            
+            try {
+                const url = `https://photon.komoot.io/api/?q=${encodeURIComponent(query)}&limit=10`;
+                const response = await fetch(url);
+                const data = await response.json();
+                
+                resultsDiv.innerHTML = '';
+                
+                if (!data.features || data.features.length === 0) {
+                    resultsDiv.innerHTML = '<div class="search-result-item no-click"><div class="icon">❌</div><div class="info"><div class="name">No results found</div><div class="details">Try a different search</div></div></div>';
+                    return;
+                }
+                
+                data.features.forEach(feature => {
+                    const props = feature.properties;
+                    const coords = feature.geometry.coordinates;
+                    const name = props.name || props.city || props.state;
+                    const details = [props.city, props.state, props.country].filter(Boolean).join(', ');
+                    
+                    const item = document.createElement('div');
+                    item.className = 'search-result-item';
+                    item.innerHTML = `
+                        <div class="icon">📍</div>
+                        <div class="info">
+                            <div class="name">${name}</div>
+                            <div class="details">${details}</div>
+                        </div>
+                    `;
+                    item.onclick = () => selectLocation({
+                        display_name: details || name,
+                        lat: coords[1],
+                        lon: coords[0]
+                    });
+                    resultsDiv.appendChild(item);
+                });
+                
+                resultsDiv.style.display = 'block';
+            } catch (error) {
+                console.error('Search error:', error);
+                resultsDiv.innerHTML = '<div class="search-result-item no-click"><div class="icon">⚠️</div><div class="info"><div class="name">Search error</div><div class="details">Please try again</div></div></div>';
+                resultsDiv.style.display = 'block';
+            }
+        }
+
+        function selectLocation(location) {
+            const lat = parseFloat(location.lat);
+            const lon = parseFloat(location.lon);
+            
+            if (isNaN(lat) || isNaN(lon)) {
+                alert('Invalid location coordinates');
+                return;
+            }
+            
+            selectedLocation = {
+                name: location.display_name,
+                lat: lat,
+                lon: lon
+            };
+            
+            const shortName = location.display_name.split(',').slice(0, 2).join(',');
+            document.getElementById('selectedLocation').innerHTML = `<span style="color: #10b981;">${shortName}</span>`;
+            document.getElementById('searchResults').style.display = 'none';
+            document.getElementById('locationSearch').value = shortName;
+            
+            // Update preview map
+            if (previewMarker) {
+                previewMap.removeLayer(previewMarker);
+            }
+            
+            const redPinIcon = L.divIcon({
+                className: 'custom-pin',
+                html: '<div style="font-size: 2.5rem; line-height: 1; transform: translateY(-50%);">📍</div>',
+                iconSize: [30, 42],
+                iconAnchor: [15, 42],
+                popupAnchor: [0, -42]
+            });
+            
+            previewMarker = L.marker([lat, lon], { icon: redPinIcon }).addTo(previewMap);
+            previewMarker.bindPopup(`<b>${shortName}</b><br>${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E`).openPopup();
+            previewMap.setView([lat, lon], 12);}
+
+        // Close search results when clicking outside
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.search-wrapper')) {
+                document.getElementById('searchResults').style.display = 'none';
+            }
+        });
+
+        async function analyzeWeather() {
+            if (!selectedLocation) {
+                alert('Please search and select a location first');
+                return;
+            }
+
+            // Create ROI from selected location (small box around point)
+            const offset = 0.1;
+            const currentROI = {
+                type: 'Feature',
+                geometry: {
+                    type: 'Polygon',
+                    coordinates: [[
+                        [selectedLocation.lon - offset, selectedLocation.lat - offset],
+                        [selectedLocation.lon + offset, selectedLocation.lat - offset],
+                        [selectedLocation.lon + offset, selectedLocation.lat + offset],
+                        [selectedLocation.lon - offset, selectedLocation.lat + offset],
+                        [selectedLocation.lon - offset, selectedLocation.lat - offset]
+                    ]]
+                }
+            };
+
+            const resultsSection = document.getElementById('resultsSection');
+            const loading = document.getElementById('loading');
+            const resultsContent = document.getElementById('resultsContent');
+            
+            resultsSection.style.display = 'block';
+            loading.classList.add('active');
+            resultsContent.style.display = 'none';
+
+            try {
+                const response = await fetch('/get-rainfall-forecast/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ roi: currentROI })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    displayResults(result.data);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            } finally {
+                loading.classList.remove('active');
+                resultsContent.style.display = 'block';
+            }
+        }
+
+        function displayResults(data) {);););
+            
+            // Location
+            document.getElementById('locationCoords').textContent = 
+                `${data.location.lat}°N, ${data.location.lon}°E`;
+
+            // 7-day forecast
+            const total7 = data.forecast_7day.reduce((sum, f) => sum + f.rainfall, 0);
+            document.getElementById('total7day').textContent = total7.toFixed(1) + ' mm';
+
+            const forecastGrid = document.getElementById('forecastGrid');
+            forecastGrid.innerHTML = '';
+            data.forecast_7day.forEach(f => {
+                forecastGrid.innerHTML += `
+                    <div class="forecast-card">
+                        <div class="icon">${f.icon}</div>
+                        <div class="date">${new Date(f.date).toLocaleDateString('en-US', {month: 'short', day: 'numeric'})}</div>
+                        <div class="rainfall">${f.rainfall} mm</div>
+                        <div class="weather-detail"><i class="fas fa-thermometer-half"></i> ${f.temp}°C</div>
+                        <div class="weather-detail"><i class="fas fa-tint"></i> ${f.humidity}%</div>
+                        <div class="weather-detail"><i class="fas fa-wind"></i> ${f.wind_speed} m/s</div>
+                    </div>
+                `;
+            });
+
+            // 30-day prediction
+            document.getElementById('total30day').textContent = data.prediction_30day.total + ' mm';
+            document.getElementById('week1').textContent = data.prediction_30day.week1 + ' mm';
+            document.getElementById('week2').textContent = data.prediction_30day.week2 + ' mm';
+            document.getElementById('week3').textContent = data.prediction_30day.week3 + ' mm';
+            document.getElementById('week4').textContent = data.prediction_30day.week4 + ' mm';
+            document.getElementById('confidence').textContent = data.prediction_30day.confidence;
+
+            // Long-term predictions
+            document.getElementById('year1Pred').textContent = data.prediction_30day.year1_prediction + ' mm';
+            document.getElementById('year2Pred').textContent = data.prediction_30day.year2_prediction + ' mm';
+            
+            const trendEmoji = {
+                'increasing': '📈 Increasing',
+                'decreasing': '📉 Decreasing',
+                'stable': '➡️ Stable',
+                'normal': '➡️ Normal'
+            };
+            document.getElementById('trendValue').textContent = trendEmoji[data.prediction_30day.trend] || '➡️ Normal';
+
+            // Destroy old charts
+            if (historicalChart) {
+                historicalChart.destroy();
+                historicalChart = null;
+            }
+            if (monthlyChart) {
+                monthlyChart.destroy();
+                monthlyChart = null;
+            }
+            
+            const ctx = document.getElementById('historicalChart').getContext('2d');););
+            
+            historicalChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.historical.map(h => h.year),
+                    datasets: [{
+                        label: 'Monthly Rainfall (mm)',
+                        data: data.historical.map(h => h.rainfall),
+                        borderColor: '#ff8c00',
+                        backgroundColor: 'rgba(255, 140, 0, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        title: { 
+                            display: true, 
+                            text: `Annual Rainfall (20 Years) - ${data.location.lat.toFixed(2)}°N, ${data.location.lon.toFixed(2)}°E` 
+                        }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Rainfall (mm)' } },
+                        x: { title: { display: true, text: 'Year' } }
+                    }
+                }
+            });
+
+            // Monthly predictions
+            const currentDate = new Date();
+            const currentMonth = currentDate.toLocaleString('default', { month: 'long' });
+            const currentYear = currentDate.getFullYear();
+            
+            document.getElementById('monthlyChartTitle').textContent = `${currentMonth} Rainfall History (20 Years)`;
+            document.getElementById('predictionTitle').textContent = `${currentMonth} Predictions for Next 2 Years`;
+            document.getElementById('year1Label').textContent = `${currentMonth} ${currentYear + 1}`;
+            document.getElementById('year2Label').textContent = `${currentMonth} ${currentYear + 2}`;
+            
+            document.getElementById('year1Pred').textContent = data.monthly_prediction.year1 + ' mm';
+            document.getElementById('year2Pred').textContent = data.monthly_prediction.year2 + ' mm';
+            
+            const trendEmoji2 = {
+                'increasing': '📈 Increasing',
+                'decreasing': '📉 Decreasing',
+                'stable': '➡️ Stable',
+                'normal': '➡️ Normal'
+            };
+            document.getElementById('trendValue').textContent = trendEmoji2[data.monthly_prediction.trend] || '➡️ Normal';
+            
+            // Monthly chart
+            const monthlyCtx = document.getElementById('monthlyChart').getContext('2d');
+            monthlyChart = new Chart(monthlyCtx, {
+                type: 'line',
+                data: {
+                    labels: data.monthly_historical.map(h => h.year),
+                    datasets: [{
+                        label: `${currentMonth} Rainfall (mm)`,
+                        data: data.monthly_historical.map(h => h.rainfall),
+                        borderColor: '#ff8c00',
+                        backgroundColor: 'rgba(255, 140, 0, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: true },
+                        title: { display: true, text: `${currentMonth} Rainfall Trends` }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Rainfall (mm)' } },
+                        x: { title: { display: true, text: 'Year' } }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+</html>

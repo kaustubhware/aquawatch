@@ -1,0 +1,1363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>AquaWatch - Water Bodies Analysis</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.css" />
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #0066cc;
+            --secondary-blue: #0052a3;
+            --accent-blue: #3399ff;
+            --light-blue: #cce5ff;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+            min-height: 100vh;
+        }
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .logo { color: white; font-size: 1.25rem; font-weight: 600; text-decoration: none; }
+        .back-btn {
+            color: white;
+            text-decoration: none;
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 400px;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            height: calc(100vh - 100px);
+        }
+        .map-section {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            border: 1px solid #e5e7eb;
+        }
+        .map-header {
+            background: #f9fafb;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .map-title {
+            font-weight: 600;
+            color: #111827;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        #map { height: calc(100% - 60px); width: 100%; }
+        .control-panel {
+            background: white;
+            border-radius: 1rem;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .panel-header {
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue));
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+        .panel-content { flex: 1; padding: 1.5rem; overflow-y: auto; }
+        .form-group { margin-bottom: 1rem; }
+        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; font-size: 0.875rem; }
+        .form-input { width: 100%; padding: 0.75rem; border: 1px solid #ddd; border-radius: 0.5rem; }
+        .btn {
+            width: 100%;
+            padding: 0.875rem;
+            border: none;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            margin-bottom: 0.75rem;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue));
+            color: white;
+        }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-secondary { background: #f3f4f6; color: #374151; }
+        .loading {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(8px);
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+        .loading.active { display: flex; }
+        .loading-content {
+            text-align: center;
+            padding: 2rem;
+            background: linear-gradient(135deg, var(--primary-blue), var(--accent-blue));
+            border-radius: 1rem;
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            min-width: 300px;
+        }
+        .spinner {
+            width: 3rem;
+            height: 3rem;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-top: 3px solid white;
+            border-radius: 50%;
+            animation: spin 1.2s linear infinite;
+            margin: 0 auto 1rem;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .results {
+            background: linear-gradient(135deg, var(--primary-blue), var(--secondary-blue));
+            color: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            margin-top: 1rem;
+            display: none;
+        }
+        .results.active { display: block; }
+        .result-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+        .legend {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            font-size: 0.875rem;
+            line-height: 1.8;
+        }
+        .legend h4 {
+            margin: 0 0 0.5rem 0;
+            font-size: 1rem;
+            color: #111827;
+        }
+        .legend span {
+            display: inline-block;
+            width: 20px;
+            height: 12px;
+            margin-right: 0.5rem;
+            border: 1px solid #ccc;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/" class="logo"><i class="fas fa-water"></i> AquaWatch - Water Analysis</a>
+        <a href="/" class="back-btn"><i class="fas fa-arrow-left"></i> Back</a>
+    </div>
+    
+    <div class="main-content">
+        <div class="map-section">
+            <div class="map-header">
+                <div class="map-title">
+                    <i class="fas fa-map"></i>
+                    Interactive Map
+                </div>
+                <div id="drawInstruction" style="color: #dc2626; font-size: 0.875rem; font-weight: 500;">
+                    Define study area boundaries to initiate satellite analysis
+                </div>
+            </div>
+            <div id="map"></div>
+        </div>
+        
+        <div class="control-panel">
+            <div class="panel-header">
+                <h2>Water Analysis</h2>
+                <p>Monitor water bodies and detect changes</p>
+            </div>
+            
+            <div class="panel-content">
+                <div class="form-group">
+                    <label class="form-label">Input Type</label>
+                    <select id="inputType" class="form-input">
+                        <option value="roi">Draw ROI on Map</option>
+                        <option value="shapefile">Upload File (Shapefile/GeoJSON/TopoJSON)</option>
+                    </select>
+                </div>
+                
+                <div id="shapefileUpload" style="display:none;" class="form-group">
+                    <label class="form-label">Upload Shapefile/GeoJSON/TopoJSON</label>
+                    <input type="file" id="shapefileInput" class="form-input" accept=".zip,.geojson,.json,.topojson" style="padding:0.5rem;">
+                    <small style="color:#666; font-size:0.75rem; display:block; margin-top:0.5rem;">
+                        📁 Upload .zip (shapefile), .geojson, .json, or .topojson file
+                    </small>
+                </div>
+                
+                <div class="form-group">
+                    <label class="form-label">Analysis Type</label>
+                    <select id="analysisType" class="form-input">
+                        <option value="change_detection">Water Change Detection</option>
+                        <option value="seasonal">Seasonal & Drought Analysis</option>
+                        <option value="quality">Water Quality Assessment</option>
+                        <option value="advanced">🤖 ML Water Detection (AI+Ensemble)</option>
+                    </select>
+                </div>
+                
+                <div id="changeDetectionOptions" style="display:block;">
+                    <div class="form-group">
+                        <label class="form-label">Time Period</label>
+                        <select id="timePeriod" class="form-input">
+                            <option value="6months">6 Months</option>
+                            <option value="1year">1 Year</option>
+                            <option value="custom">Custom Dates</option>
+                        </select>
+                    </div>
+                    
+                    <div id="yearSelection" style="display:block;">
+                        <div class="form-group">
+                            <label class="form-label">Select Year</label>
+                            <select id="yearSelect" class="form-input">
+                                <option value="2025">2025</option>
+                                <option value="2024">2024</option>
+                                <option value="2023">2023</option>
+                                <option value="2022">2022</option>
+                                <option value="2021">2021</option>
+                                <option value="2020">2020</option>
+                                <option value="2019">2019</option>
+                                <option value="2018">2018</option>
+                                <option value="2017">2017</option>
+                            </select>
+                        </div>
+                        
+                        <div id="halfYearSelection" style="display:block;">
+                            <div class="form-group">
+                                <label class="form-label">Select Period</label>
+                                <select id="halfYear" class="form-input">
+                                    <option value="first">First 6 Months (Jan-Jun)</option>
+                                    <option value="last">Last 6 Months (Jul-Dec)</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="customDates" style="display:none;">
+                        <div class="form-group">
+                            <label class="form-label">Period 1 Start Date</label>
+                            <input type="date" id="period1Start" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Period 1 End Date</label>
+                            <input type="date" id="period1End" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Period 2 Start Date</label>
+                            <input type="date" id="period2Start" class="form-input">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label">Period 2 End Date</label>
+                            <input type="date" id="period2End" class="form-input">
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="otherAnalysisOptions" style="display:none;">
+                    <div class="form-group">
+                        <label class="form-label">Select Year</label>
+                        <select id="seasonalYear" class="form-input">
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                            <option value="2023">2023</option>
+                            <option value="2022">2022</option>
+                            <option value="2021">2021</option>
+                            <option value="2020">2020</option>
+                            <option value="2019">2019</option>
+                            <option value="2018">2018</option>
+                            <option value="2017">2017</option>
+                        </select>
+                    </div>
+                    <input type="hidden" id="startDate" value="2024-01-01">
+                    <input type="hidden" id="endDate" value="2024-12-31">
+                </div>
+                
+                <button id="analyzeBtn" class="btn btn-primary" disabled>
+                    <i class="fas fa-chart-line"></i> Analyze Water
+                </button>
+                <button id="timeSeriesBtn" class="btn btn-primary" style="display:none;">
+                    <i class="fas fa-chart-area"></i> Time Series Analysis
+                </button>
+                <button id="clearBtn" class="btn btn-secondary">
+                    <i class="fas fa-trash"></i> Clear Selection
+                </button>
+                
+                <div id="timeSeriesModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+                    <div style="background:white; border-radius:1rem; width:90%; max-width:1000px; max-height:90vh; overflow:hidden; display:flex; flex-direction:column;">
+                        <div style="background:linear-gradient(135deg, var(--primary-blue), var(--accent-blue)); color:white; padding:1.5rem; display:flex; justify-content:space-between; align-items:center;">
+                            <h3>Water Index Time Series (Water Pixels Only)</h3>
+                            <div style="display: flex; gap: 0.5rem; align-items: center;">
+                                <button id="downloadWaterCSVBtn" style="background: rgba(255,255,255,0.2); color: white; padding: 0.5rem 1rem; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.875rem;">
+                                    <i class="fas fa-download"></i> Download CSV
+                                </button>
+                                <button onclick="closeTimeSeriesModal()" style="background:none; border:none; color:white; font-size:1.5rem; cursor:pointer;">&times;</button>
+                            </div>
+                        </div>
+                        <div style="padding:2rem; overflow-y:auto; flex:1;">
+                            <div id="periodSummary" style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1.5rem; padding:1rem; background:#f3f4f6; border-radius:0.5rem;"></div>
+                            <canvas id="timeSeriesChart" width="800" height="400"></canvas>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="loading" class="loading">
+                    <div class="loading-content">
+                        <div class="spinner"></div>
+                        <div id="loadingText" style="font-weight: 500; font-size: 0.95rem;">Processing satellite imagery...</div>
+                    </div>
+                </div>
+                
+                <div id="results" class="results">
+                    <h3 id="resultsTitle">Analysis Results</h3>
+                    <div class="result-item">
+                        <span id="resultLabel1">Water Area</span>
+                        <span id="waterArea">-- km²</span>
+                    </div>
+                    <div class="result-item">
+                        <span id="resultLabel2">Change</span>
+                        <span id="waterChange">--%</span>
+                    </div>
+                    <div id="seasonalExtras" style="display:none;">
+                        <div class="result-item">
+                            <span>Drought Severity</span>
+                            <span id="droughtLevel">--</span>
+                        </div>
+                        <div class="result-item">
+                            <span>Water Stress</span>
+                            <span id="waterStress">--</span>
+                        </div>
+                    </div>
+                    
+                    <div id="downloadSection" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(255,255,255,0.2); display: none;">
+                        <div style="color: white; font-weight: 600; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.5rem;">
+                            <i class="fas fa-download"></i>
+                            Export Analysis
+                        </div>
+                        <button id="downloadTIFF" class="btn" style="background: rgba(255,255,255,0.2); color: white; width: 100%;">
+                            <i class="fas fa-file-archive"></i>
+                            Download GeoTIFF (10m)
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-draw@1.0.4/dist/leaflet.draw.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://unpkg.com/shpjs@latest/dist/shp.js"></script>
+    <script src="https://unpkg.com/topojson-client@3"></script>
+    <script>
+        const map = L.map('map').setView([20.5937, 78.9629], 5);
+        
+        const satelliteMap = L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+            attribution: '© Google Satellite'
+        });
+        
+        const hybridMap = L.layerGroup([
+            L.tileLayer('https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}', {
+                attribution: '© Google Satellite'
+            }),
+            L.tileLayer('https://mt1.google.com/vt/lyrs=h&x={x}&y={y}&z={z}', {
+                attribution: '© Google Labels'
+            })
+        ]);
+        
+        hybridMap.addTo(map);
+        
+        const baseLayers = {
+            "Satellite": satelliteMap,
+            "Hybrid": hybridMap
+        };
+        
+        const baseLayerControl = L.control.layers(baseLayers, null, {position: 'topright'});
+        baseLayerControl.addTo(map);
+        
+        const drawnItems = new L.FeatureGroup();
+        map.addLayer(drawnItems);
+        
+        const drawControl = new L.Control.Draw({
+            edit: { featureGroup: drawnItems },
+            draw: { polygon: true, rectangle: true, circle: false, marker: false, polyline: false, circlemarker: false }
+        });
+        map.addControl(drawControl);
+        
+        let currentROI = null;
+        let analysisLayers = {};
+        let currentLayerControl = null;
+        let currentLegend = null;
+        let timeSeriesData = null;
+        let timeSeriesChart = null;
+        let shapefileLayer = null;
+        let loadingTimeout1 = null;
+        let loadingTimeout2 = null;
+        
+        function startLoadingAnimation() {
+            const loadingText = document.getElementById('loadingText');
+            loadingText.textContent = 'Processing satellite imagery...';
+            
+            loadingTimeout1 = setTimeout(() => {
+                loadingText.textContent = 'Loading machine learning model...';
+            }, 10000);
+            
+            loadingTimeout2 = setTimeout(() => {
+                loadingText.textContent = 'Almost there... Please be patient';
+            }, 20000);
+        }
+        
+        function stopLoadingAnimation() {
+            if (loadingTimeout1) clearTimeout(loadingTimeout1);
+            if (loadingTimeout2) clearTimeout(loadingTimeout2);
+            loadingTimeout1 = null;
+            loadingTimeout2 = null;
+        }
+        
+        document.getElementById('inputType').addEventListener('change', function() {
+            const inputType = this.value;
+            if (inputType === 'shapefile') {
+                document.getElementById('shapefileUpload').style.display = 'block';
+                drawControl.remove();
+            } else {
+                document.getElementById('shapefileUpload').style.display = 'none';
+                drawControl.addTo(map);
+            }
+        });
+        
+        document.getElementById('shapefileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            
+            const fileName = file.name.toLowerCase();
+            const reader = new FileReader();
+            
+            if (fileName.endsWith('.geojson') || fileName.endsWith('.json')) {
+                reader.onload = function(event) {
+                    try {
+                        const data = JSON.parse(event.target.result);if (data.type === 'Topology') {
+                            const objectKey = Object.keys(data.objects)[0];
+                            const geojson = topojson.feature(data, data.objects[objectKey]);loadGeoJSON(geojson);
+                        } else {
+                            loadGeoJSON(data);
+                        }
+                    } catch(error) {
+                        console.error('Parse error:', error);
+                        alert('Error parsing file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+            } else if (fileName.endsWith('.zip')) {
+                reader.onload = function(event) {
+                    shp(event.target.result).then(function(geojson) {
+                        loadGeoJSON(geojson);
+                    }).catch(function(error) {
+                        alert('Error loading shapefile: ' + error.message);
+                    });
+                };
+                reader.readAsArrayBuffer(file);
+            }
+        });
+        
+        function loadGeoJSON(geojson) {
+            try {
+                if (shapefileLayer) {
+                    drawnItems.removeLayer(shapefileLayer);
+                }
+                drawnItems.clearLayers();// Wrap single geometry in FeatureCollection if needed
+                if (geojson.type === 'Feature') {
+                    geojson = { type: 'FeatureCollection', features: [geojson] };
+                } else if (geojson.type && geojson.type !== 'FeatureCollection' && geojson.coordinates) {
+                    geojson = { type: 'FeatureCollection', features: [{ type: 'Feature', geometry: geojson, properties: {} }] };
+                }shapefileLayer = L.geoJSON(geojson, {
+                    style: { color: '#3388ff', weight: 3, fillOpacity: 0.2 }
+                });
+                drawnItems.addLayer(shapefileLayer);
+                
+                // Merge all features into one for ROI
+                if (geojson.features.length > 1) {
+                    const allCoords = [];
+                    geojson.features.forEach(f => {
+                        if (f.geometry.type === 'Polygon') {
+                            allCoords.push(f.geometry.coordinates);
+                        } else if (f.geometry.type === 'MultiPolygon') {
+                            allCoords.push(...f.geometry.coordinates);
+                        }
+                    });
+                    currentROI = {
+                        type: 'Feature',
+                        geometry: { type: 'MultiPolygon', coordinates: allCoords },
+                        properties: {}
+                    };} else {
+                    currentROI = geojson.features[0];
+                }
+                
+                map.fitBounds(shapefileLayer.getBounds());
+                
+                document.getElementById('analyzeBtn').disabled = false;
+                document.getElementById('drawInstruction').style.display = 'none';} catch(error) {
+                console.error('Load error:', error);
+                alert('Error loading GeoJSON: ' + error.message);
+            }
+        }
+        
+        // Handle analysis type change
+        document.getElementById('analysisType').addEventListener('change', function() {
+            const analysisType = this.value;
+            if (analysisType === 'change_detection') {
+                document.getElementById('changeDetectionOptions').style.display = 'block';
+                document.getElementById('otherAnalysisOptions').style.display = 'none';
+            } else {
+                document.getElementById('changeDetectionOptions').style.display = 'none';
+                document.getElementById('otherAnalysisOptions').style.display = 'block';
+            }
+        });
+        
+        document.getElementById('seasonalYear').addEventListener('change', function() {
+            const year = this.value;
+            document.getElementById('startDate').value = `${year}-01-01`;
+            document.getElementById('endDate').value = `${year}-12-31`;
+        });
+        
+        // Handle time period change
+        document.getElementById('timePeriod').addEventListener('change', function() {
+            const period = this.value;
+            if (period === 'custom') {
+                document.getElementById('yearSelection').style.display = 'none';
+                document.getElementById('customDates').style.display = 'block';
+            } else {
+                document.getElementById('yearSelection').style.display = 'block';
+                document.getElementById('customDates').style.display = 'none';
+                
+                // Show/hide half year selection
+                if (period === '6months') {
+                    document.getElementById('halfYearSelection').style.display = 'block';
+                } else {
+                    document.getElementById('halfYearSelection').style.display = 'none';
+                }
+            }
+        });
+        
+        map.on(L.Draw.Event.CREATED, function(e) {
+            drawnItems.clearLayers();
+            drawnItems.addLayer(e.layer);
+            currentROI = e.layer.toGeoJSON();
+            document.getElementById('analyzeBtn').disabled = false;
+            document.getElementById('drawInstruction').style.display = 'none';
+        });
+        
+        document.getElementById('clearBtn').addEventListener('click', function() {
+            drawnItems.clearLayers();
+            currentROI = null;
+            document.getElementById('analyzeBtn').disabled = true;
+            document.getElementById('results').classList.remove('active');
+            document.getElementById('drawInstruction').style.display = 'block';
+        });
+        
+        document.getElementById('analyzeBtn').addEventListener('click', async function() {
+            if (!currentROI) return;
+            
+            const analysisType = document.getElementById('analysisType').value;
+            
+            if (analysisType === 'change_detection') {
+                const timePeriod = document.getElementById('timePeriod').value;
+                let period1Start, period1End, period2Start, period2End;
+                
+                if (timePeriod === 'custom') {
+                    period1Start = document.getElementById('period1Start').value;
+                    period1End = document.getElementById('period1End').value;
+                    period2Start = document.getElementById('period2Start').value;
+                    period2End = document.getElementById('period2End').value;
+                } else {
+                    const year = document.getElementById('yearSelect').value;
+                    
+                    if (timePeriod === '6months') {
+                        const half = document.getElementById('halfYear').value;
+                        if (half === 'first') {
+                            period1Start = `${year}-01-01`;
+                            period1End = `${year}-03-31`;
+                            period2Start = `${year}-04-01`;
+                            period2End = `${year}-06-30`;
+                        } else {
+                            period1Start = `${year}-07-01`;
+                            period1End = `${year}-09-30`;
+                            period2Start = `${year}-10-01`;
+                            period2End = `${year}-12-31`;
+                        }
+                    } else { // 1 year
+                        period1Start = `${year}-01-01`;
+                        period1End = `${year}-06-30`;
+                        period2Start = `${year}-07-01`;
+                        period2End = `${year}-12-31`;
+                    }
+                }
+                
+                document.getElementById('loading').classList.add('active');
+                startLoadingAnimation();
+                
+                const response = await fetch('/analyze-water-change/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        roi: currentROI,
+                        period1Start: period1Start,
+                        period1End: period1End,
+                        period2Start: period2Start,
+                        period2End: period2End
+                    })
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('loading').classList.remove('active');
+                stopLoadingAnimation();
+                
+                if (data.success) {
+                    // Clear existing analysis layers
+                    Object.values(analysisLayers).forEach(layer => {
+                        if (map.hasLayer(layer)) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    
+                    // Create layers but don't add to map
+                    analysisLayers = {
+                        'Period 1 Water': L.tileLayer(data.data.layers.period1_water, {opacity: 0.7}),
+                        'Period 2 Water': L.tileLayer(data.data.layers.period2_water, {opacity: 0.7}),
+                        'Water Gain': L.tileLayer(data.data.layers.water_gain, {opacity: 0.7}),
+                        'Water Loss': L.tileLayer(data.data.layers.water_loss, {opacity: 0.7})
+                    };
+                    
+                    updateLayerControl(analysisLayers);
+                    
+                    // Add legend for water change detection
+                    if (currentLegend) {
+                        map.removeControl(currentLegend);
+                    }
+                    currentLegend = L.control({position: 'bottomright'});
+                    currentLegend.onAdd = function() {
+                        const div = L.DomUtil.create('div', 'legend');
+                        div.innerHTML = `
+                            <h4>Water Change Detection</h4>
+                            <div><span style="background:#0000FF"></span>Period 1 & 2 Water</div>
+                            <div><span style="background:#00FF00"></span>Water Gain</div>
+                            <div><span style="background:#FF0000"></span>Water Loss</div>
+                        `;
+                        return div;
+                    };
+                    currentLegend.addTo(map);
+                    
+                    document.getElementById('resultsTitle').textContent = 'Analysis Results';
+                    document.getElementById('resultLabel1').textContent = 'Water Area';
+                    document.getElementById('resultLabel2').textContent = 'Change';
+                    document.getElementById('waterArea').textContent = data.data.period2_area + ' km²';
+                    document.getElementById('waterChange').textContent = data.data.percentage + '%';
+                    document.getElementById('seasonalExtras').style.display = 'none';
+                    document.getElementById('results').classList.add('active');
+                    document.getElementById('downloadSection').style.display = 'block';
+                    
+                    // Store time series data and show button
+                    if (data.data.time_series) {
+                        timeSeriesData = data.data.time_series;
+                        document.getElementById('timeSeriesBtn').style.display = 'block';
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } else if (analysisType === 'seasonal') {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                document.getElementById('loading').classList.add('active');
+                startLoadingAnimation();
+                
+                const response = await fetch('/analyze-seasonal-water/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        roi: currentROI,
+                        startDate: startDate,
+                        endDate: endDate
+                    })
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('loading').classList.remove('active');
+                stopLoadingAnimation();
+                
+                if (data.success) {
+                    Object.values(analysisLayers).forEach(layer => {
+                        if (map.hasLayer(layer)) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    
+                    analysisLayers = {
+                        'Pre-Monsoon Water': L.tileLayer(data.data.layers.pre_monsoon, {opacity: 0.7}),
+                        'Monsoon Water': L.tileLayer(data.data.layers.monsoon, {opacity: 0.7}),
+                        'Post-Monsoon Water': L.tileLayer(data.data.layers.post_monsoon, {opacity: 0.7}),
+                        'Permanent Water': L.tileLayer(data.data.layers.permanent, {opacity: 0.7}),
+                        'Seasonal Water': L.tileLayer(data.data.layers.seasonal, {opacity: 0.7})
+                    };
+                    
+                    updateLayerControl(analysisLayers);
+                    
+                    // Add legend for seasonal water analysis
+                    if (currentLegend) {
+                        map.removeControl(currentLegend);
+                    }
+                    currentLegend = L.control({position: 'bottomright'});
+                    currentLegend.onAdd = function() {
+                        const div = L.DomUtil.create('div', 'legend');
+                        div.innerHTML = `
+                            <h4>Seasonal Water Classification</h4>
+                            <div><span style="background:#0000FF"></span>Pre/Monsoon/Post Water</div>
+                            <div><span style="background:#000080"></span>Permanent Water</div>
+                            <div><span style="background:#00FFFF"></span>Seasonal Water</div>
+                        `;
+                        return div;
+                    };
+                    currentLegend.addTo(map);
+                    
+                    document.getElementById('resultsTitle').textContent = 'Seasonal & Drought Analysis';
+                    document.getElementById('resultLabel1').textContent = 'Permanent Water';
+                    document.getElementById('resultLabel2').textContent = 'Seasonal Water';
+                    document.getElementById('waterArea').textContent = data.data.permanent_area + ' km²';
+                    document.getElementById('waterChange').textContent = data.data.seasonal_area + ' km²';
+                    document.getElementById('seasonalExtras').style.display = 'block';
+                    document.getElementById('droughtLevel').textContent = data.data.drought_severity;
+                    document.getElementById('waterStress').textContent = data.data.water_stress;
+                    document.getElementById('results').classList.add('active');
+                    document.getElementById('downloadSection').style.display = 'block';
+                    
+                    if (data.data.time_series) {
+                        timeSeriesData = data.data.time_series;
+                        document.getElementById('timeSeriesBtn').style.display = 'block';
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } else if (analysisType === 'quality') {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                document.getElementById('loading').classList.add('active');
+                startLoadingAnimation();
+                
+                const response = await fetch('/analyze-water-quality/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        roi: currentROI,
+                        startDate: startDate,
+                        endDate: endDate
+                    })
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('loading').classList.remove('active');
+                stopLoadingAnimation();
+                
+                if (data.success) {
+                    Object.values(analysisLayers).forEach(layer => {
+                        if (map.hasLayer(layer)) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    
+                    analysisLayers = {
+                        'Turbidity': L.tileLayer(data.data.layers.turbidity, {opacity: 0.7}),
+                        'Chlorophyll': L.tileLayer(data.data.layers.chlorophyll, {opacity: 0.7}),
+                        'Suspended Matter': L.tileLayer(data.data.layers.suspended_matter, {opacity: 0.7}),
+                        'Water Quality Index': L.tileLayer(data.data.layers.quality_index, {opacity: 0.7})
+                    };
+                    
+                    updateLayerControl(analysisLayers);
+                    
+                    // Add legend for water quality
+                    if (currentLegend) {
+                        map.removeControl(currentLegend);
+                    }
+                    currentLegend = L.control({position: 'bottomright'});
+                    currentLegend.onAdd = function() {
+                        const div = L.DomUtil.create('div', 'legend');
+                        div.innerHTML = `
+                            <h4>Water Quality Indicators</h4>
+                            <div><strong>Turbidity</strong></div>
+                            <div><span style="background:#0000ff"></span>Clear (0-0.5)</div>
+                            <div><span style="background:#00ffff"></span>Low (0.5-1.0)</div>
+                            <div><span style="background:#ffff00"></span>Moderate (1.0-1.5)</div>
+                            <div><span style="background:#ff0000"></span>High (>1.5)</div>
+                            <div style="margin-top:0.5rem"><strong>Chlorophyll</strong></div>
+                            <div><span style="background:#0000ff"></span>Low (0-2)</div>
+                            <div><span style="background:#00ff00"></span>Moderate (2-5)</div>
+                            <div><span style="background:#ffff00"></span>High (5-10)</div>
+                            <div><span style="background:#ff0000"></span>Very High (>10)</div>
+                        `;
+                        return div;
+                    };
+                    currentLegend.addTo(map);
+                    
+                    document.getElementById('resultsTitle').textContent = 'Water Quality Assessment';
+                    document.getElementById('resultLabel1').textContent = 'Water Quality';
+                    document.getElementById('resultLabel2').textContent = 'Turbidity Level';
+                    document.getElementById('waterArea').textContent = data.data.quality_status;
+                    document.getElementById('waterChange').textContent = data.data.turbidity_level;
+                    document.getElementById('seasonalExtras').style.display = 'block';
+                    document.getElementById('droughtLevel').textContent = data.data.chlorophyll_level;
+                    document.getElementById('waterStress').textContent = data.data.pollution_risk;
+                    document.getElementById('results').querySelector('#seasonalExtras .result-item:first-child span:first-child').textContent = 'Chlorophyll';
+                    document.getElementById('results').querySelector('#seasonalExtras .result-item:last-child span:first-child').textContent = 'Pollution Risk';
+                    document.getElementById('results').classList.add('active');
+                    document.getElementById('downloadSection').style.display = 'block';
+                    
+                    if (data.data.time_series) {
+                        timeSeriesData = data.data.time_series;
+                        document.getElementById('timeSeriesBtn').style.display = 'block';
+                    }
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            } else if (analysisType === 'advanced') {
+                const startDate = document.getElementById('startDate').value;
+                const endDate = document.getElementById('endDate').value;
+                
+                document.getElementById('loading').classList.add('active');
+                startLoadingAnimation();
+                
+                const response = await fetch('/analyze-advanced-water/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        roi: currentROI,
+                        startDate: startDate,
+                        endDate: endDate
+                    })
+                });
+                
+                const data = await response.json();
+                
+                document.getElementById('loading').classList.remove('active');
+                stopLoadingAnimation();
+                
+                if (data.success) {
+                    Object.values(analysisLayers).forEach(layer => {
+                        if (map.hasLayer(layer)) {
+                            map.removeLayer(layer);
+                        }
+                    });
+                    
+                    analysisLayers = {
+                        'ML Water Detection (Ensemble)': L.tileLayer(data.data.layers.ml_water, {opacity: 0.7}),
+                        'AI Water (Dynamic World)': L.tileLayer(data.data.layers.ai_water, {opacity: 0.7}),
+                        'NDWI Water': L.tileLayer(data.data.layers.ndwi_water, {opacity: 0.7}),
+                        'MNDWI Water': L.tileLayer(data.data.layers.mndwi_water, {opacity: 0.7}),
+                        'AWEI Water (Urban)': L.tileLayer(data.data.layers.awei_water, {opacity: 0.7})
+                    };
+                    
+                    updateLayerControl(analysisLayers);
+                    
+                    // Add legend
+                    if (currentLegend) {
+                        map.removeControl(currentLegend);
+                    }
+                    currentLegend = L.control({position: 'bottomright'});
+                    currentLegend.onAdd = function() {
+                        const div = L.DomUtil.create('div', 'legend');
+                        div.innerHTML = `
+                            <h4>🤖 ML Water Detection</h4>
+                            <div><span style="background:#0000FF"></span>ML Ensemble (4 methods)</div>
+                            <div><span style="background:#00FFFF"></span>AI (Dynamic World)</div>
+                            <div><span style="background:#00FF00"></span>NDWI</div>
+                            <div><span style="background:#FFFF00"></span>MNDWI</div>
+                            <div><span style="background:#FF00FF"></span>AWEI (Urban)</div>
+                        `;
+                        return div;
+                    };
+                    currentLegend.addTo(map);
+                    
+                    document.getElementById('resultsTitle').textContent = '🤖 ML Water Detection';
+                    document.getElementById('resultLabel1').textContent = 'ML Water Area';
+                    document.getElementById('resultLabel2').textContent = 'AI Water Area';
+                    document.getElementById('waterArea').textContent = data.data.water_area_ml + ' km²';
+                    document.getElementById('waterChange').textContent = data.data.water_area_ai + ' km²';
+                    document.getElementById('seasonalExtras').style.display = 'block';
+                    document.getElementById('droughtLevel').textContent = data.data.ml_confidence + '%';
+                    document.getElementById('waterStress').textContent = data.data.water_type;
+                    document.getElementById('results').querySelector('#seasonalExtras .result-item:first-child span:first-child').textContent = 'ML Confidence';
+                    document.getElementById('results').querySelector('#seasonalExtras .result-item:last-child span:first-child').textContent = 'Water Type';
+                    
+                    // Add indices and predictions
+                    const indicesHTML = `
+                        <div class="result-item" style="flex-direction:column; align-items:flex-start;">
+                            <strong style="margin-bottom:0.5rem;">📊 Detection Indices</strong>
+                            <div style="font-size:0.85rem; line-height:1.6;">
+                                NDWI: ${data.data.indices.ndwi}<br>
+                                MNDWI: ${data.data.indices.mndwi}<br>
+                                AWEI: ${data.data.indices.awei}
+                            </div>
+                        </div>
+                        <div class="result-item" style="flex-direction:column; align-items:flex-start;">
+                            <strong style="margin-bottom:0.5rem;">🔮 Future Predictions</strong>
+                            <div style="font-size:0.85rem; line-height:1.6;">
+                                1 Month: ${data.data.predictions['1_month']} km²<br>
+                                3 Month: ${data.data.predictions['3_month']} km²<br>
+                                Trend: ${data.data.predictions.trend}<br>
+                                Drought Risk: ${data.data.predictions.drought_risk}
+                            </div>
+                        </div>
+                    `;
+                    document.getElementById('seasonalExtras').insertAdjacentHTML('beforeend', indicesHTML);
+                    
+                    document.getElementById('results').classList.add('active');
+                    document.getElementById('downloadSection').style.display = 'block';
+                } else {
+                    alert('Error: ' + data.error);
+                }
+            }
+        });
+        
+        function updateLayerControl(overlayLayers) {
+            if (currentLayerControl && currentLayerControl !== baseLayerControl) {
+                map.removeControl(currentLayerControl);
+            }
+            map.removeControl(baseLayerControl);
+            
+            currentLayerControl = L.control.layers(baseLayers, overlayLayers, {
+                position: 'topright',
+                collapsed: false
+            });
+            currentLayerControl.addTo(map);
+        }
+        
+        document.getElementById('timeSeriesBtn').addEventListener('click', function() {
+            document.getElementById('timeSeriesModal').style.display = 'flex';
+            if (timeSeriesData && !timeSeriesChart) {
+                createTimeSeriesChart();
+            }
+        });
+        
+        function closeTimeSeriesModal() {
+            document.getElementById('timeSeriesModal').style.display = 'none';
+        }
+        
+        // Rainfall forecast removed - use Weather Analysis page instead
+        /*document.getElementById('rainfallBtn').addEventListener('click', async function() {
+            if (!currentROI) return;
+            
+            document.getElementById('rainfallModal').style.display = 'flex';
+            document.getElementById('rainfallContent').innerHTML = '<div style="text-align:center; padding:3rem;"><div class="spinner"></div><div style="margin-top:1rem;">Loading forecast data...</div></div>';
+            
+            try {
+                const response = await fetch('/get-rainfall-forecast/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ roi: currentROI })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayRainfallForecast(data.data);
+                } else {
+                    document.getElementById('rainfallContent').innerHTML = '<div style="text-align:center; padding:3rem; color:#dc2626;">Error: ' + data.error + '</div>';
+                }
+            } catch (error) {
+                document.getElementById('rainfallContent').innerHTML = '<div style="text-align:center; padding:3rem; color:#dc2626;">Network error: ' + error.message + '</div>';
+            }
+        });*/
+        
+        // Rainfall forecast functions removed - use Weather Analysis page
+        /*function displayRainfallForecast(data) {
+            const content = document.getElementById('rainfallContent');
+            
+            let html = `
+                <div style="background:white; padding:1.5rem; border-radius:1rem; margin-bottom:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem;">
+                        <h3 style="color:#0099ff; margin:0;">📍 Location: Lat ${data.location.lat}, Lon ${data.location.lon}</h3>
+                        <span style="color:#64748b; font-size:0.875rem;">🔄 ${data.last_updated}</span>
+                    </div>
+                </div>
+                
+                <div style="background:white; padding:2rem; border-radius:1rem; margin-bottom:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="color:#0099ff; margin-bottom:1.5rem; font-size:1.25rem;">📅 SHORT-TERM FORECAST (Next 5 Days)</h3>
+            `;
+            
+            if (data.forecast_7day && data.forecast_7day.length > 0) {
+                html += '<div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(140px, 1fr)); gap:1rem;">';
+            } else {
+                html += '<div style="padding:2rem; text-align:center; background:#fef3c7; border-radius:0.5rem; border:2px solid #f59e0b;"><div style="font-size:2rem; margin-bottom:0.5rem;">⚠️</div><div style="color:#92400e; font-weight:600;">5-day forecast temporarily unavailable</div><div style="color:#78350f; font-size:0.875rem; margin-top:0.5rem;">Using AI prediction based on historical data instead</div></div><div style="display:none;">';
+            }
+            
+            if (data.forecast_7day && data.forecast_7day.length > 0) {
+                data.forecast_7day.forEach((day, index) => {
+                const date = new Date(day.date);
+                const dayName = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const intensity = day.rainfall === 0 ? 'Clear' : day.rainfall < 10 ? 'Light' : day.rainfall < 30 ? 'Moderate' : 'Heavy';
+                const color = day.rainfall === 0 ? '#10b981' : day.rainfall < 10 ? '#3b82f6' : day.rainfall < 30 ? '#f59e0b' : '#ef4444';
+                
+                html += `
+                    <div style="background:linear-gradient(135deg, ${color}15, ${color}05); border:2px solid ${color}40; border-radius:0.75rem; padding:1rem; text-align:center;">
+                        <div style="font-size:2rem; margin-bottom:0.5rem;">${day.icon}</div>
+                        <div style="font-weight:600; color:#1e293b; margin-bottom:0.25rem;">Day ${index + 1}</div>
+                        <div style="font-size:0.75rem; color:#64748b; margin-bottom:0.5rem;">${dayName}</div>
+                        <div style="font-size:1.5rem; font-weight:700; color:${color}; margin-bottom:0.25rem;">${day.rainfall}mm</div>
+                        <div style="font-size:0.75rem; color:#64748b;">${intensity}</div>
+                    </div>
+                `;
+                });
+            }
+            
+            const total7day = data.forecast_7day && data.forecast_7day.length > 0 ? data.forecast_7day.reduce((sum, d) => sum + d.rainfall, 0) : 0;
+            const avg7day = (total7day / 7).toFixed(1);
+            
+            html += `
+                    </div>
+                    <div style="margin-top:1.5rem; padding:1rem; background:#f1f5f9; border-radius:0.5rem; display:flex; justify-content:space-around;">
+                        <div style="text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b;">Total Expected</div>
+                            <div style="font-size:1.5rem; font-weight:700; color:#0099ff;">${total7day.toFixed(1)}mm</div>
+                        </div>
+                        <div style="text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b;">Daily Average</div>
+                            <div style="font-size:1.5rem; font-weight:700; color:#0099ff;">${avg7day}mm</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div style="background:white; padding:2rem; border-radius:1rem; margin-bottom:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                    <h3 style="color:#0099ff; margin-bottom:1.5rem; font-size:1.25rem;">🤖 AI PREDICTION (Next 30 Days)</h3>
+                    <p style="color:#64748b; margin-bottom:1.5rem;">Based on 20-year historical patterns</p>
+                    
+                    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:1rem; margin-bottom:1.5rem;">
+                        <div style="background:linear-gradient(135deg, #00d4ff15, #00d4ff05); border:2px solid #00d4ff40; border-radius:0.75rem; padding:1.25rem; text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b; margin-bottom:0.5rem;">Week 1</div>
+                            <div style="font-size:1.75rem; font-weight:700; color:#00d4ff;">${data.prediction_30day.week1}mm</div>
+                        </div>
+                        <div style="background:linear-gradient(135deg, #0099ff15, #0099ff05); border:2px solid #0099ff40; border-radius:0.75rem; padding:1.25rem; text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b; margin-bottom:0.5rem;">Week 2</div>
+                            <div style="font-size:1.75rem; font-weight:700; color:#0099ff;">${data.prediction_30day.week2}mm</div>
+                        </div>
+                        <div style="background:linear-gradient(135deg, #0066ff15, #0066ff05); border:2px solid #0066ff40; border-radius:0.75rem; padding:1.25rem; text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b; margin-bottom:0.5rem;">Week 3</div>
+                            <div style="font-size:1.75rem; font-weight:700; color:#0066ff;">${data.prediction_30day.week3}mm</div>
+                        </div>
+                        <div style="background:linear-gradient(135deg, #0052cc15, #0052cc05); border:2px solid #0052cc40; border-radius:0.75rem; padding:1.25rem; text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b; margin-bottom:0.5rem;">Week 4</div>
+                            <div style="font-size:1.75rem; font-weight:700; color:#0052cc;">${data.prediction_30day.week4}mm</div>
+                        </div>
+                    </div>
+                    
+                    <div style="display:flex; gap:1rem; margin-bottom:1.5rem;">
+                        <div style="flex:1; background:#f1f5f9; padding:1rem; border-radius:0.5rem; text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b;">Total Month</div>
+                            <div style="font-size:2rem; font-weight:700; color:#0099ff;">${data.prediction_30day.total}mm</div>
+                        </div>
+                        <div style="flex:1; background:#f1f5f9; padding:1rem; border-radius:0.5rem; text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b;">Confidence</div>
+                            <div style="font-size:2rem; font-weight:700; color:#10b981;">${data.prediction_30day.confidence}%</div>
+                        </div>
+                    </div>
+                    
+                    <div style="background:linear-gradient(135deg, #f0f9ff, #e0f2fe); padding:1.5rem; border-radius:0.75rem; border:2px solid #0099ff;">
+                        <h4 style="color:#0099ff; margin-bottom:1rem; font-size:1rem; font-weight:700;">🔮 Long-Term Forecast (Next 2 Years)</h4>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
+                            <div style="text-align:center; padding:1rem; background:white; border-radius:0.5rem;">
+                                <div style="font-size:0.875rem; color:#64748b; margin-bottom:0.5rem;">Year 1 (2026)</div>
+                                <div style="font-size:1.5rem; font-weight:700; color:#0099ff;">${data.prediction_30day.year1_prediction}mm</div>
+                            </div>
+                            <div style="text-align:center; padding:1rem; background:white; border-radius:0.5rem;">
+                                <div style="font-size:0.875rem; color:#64748b; margin-bottom:0.5rem;">Year 2 (2027)</div>
+                                <div style="font-size:1.5rem; font-weight:700; color:#0099ff;">${data.prediction_30day.year2_prediction}mm</div>
+                            </div>
+                        </div>
+                        <div style="margin-top:1rem; text-align:center; font-size:0.875rem; color:#64748b;">
+                            Trend: <strong style="color:#0099ff; text-transform:capitalize;">${data.prediction_30day.trend}</strong>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            if (data.historical && data.historical.length > 0) {
+                html += `
+                    <div style="background:white; padding:2rem; border-radius:1rem; margin-bottom:1.5rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="color:#0099ff; margin-bottom:1.5rem; font-size:1.25rem;">📈 HISTORICAL COMPARISON</h3>
+                        <p style="color:#64748b; margin-bottom:1.5rem;">Current month vs Last 20 Years</p>
+                        <div style="display:grid; gap:0.75rem;">
+                `;
+                
+                data.historical.forEach(h => {
+                    let diff, arrow, color, diffText;
+                    if (h.rainfall === 0) {
+                        diffText = data.prediction_30day.total > 0 ? '⬆️ Much Higher' : '➡️ Same';
+                        color = data.prediction_30day.total > 0 ? '#10b981' : '#64748b';
+                    } else {
+                        diff = ((data.prediction_30day.total - h.rainfall) / h.rainfall * 100).toFixed(0);
+                        arrow = diff > 0 ? '⬆️' : '⬇️';
+                        color = diff > 0 ? '#10b981' : '#ef4444';
+                        diffText = `${arrow} ${Math.abs(diff)}%`;
+                    }
+                    
+                    html += `
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:1rem; background:#f8fafc; border-radius:0.5rem;">
+                            <span style="font-weight:600; color:#1e293b;">${h.year}</span>
+                            <span style="color:#64748b;">${h.rainfall}mm</span>
+                            <span style="color:${color}; font-weight:600;">${diffText}</span>
+                        </div>
+                    `;
+                });
+                
+                const avgHistorical = (data.historical.reduce((sum, h) => sum + h.rainfall, 0) / data.historical.length).toFixed(1);
+                const status = data.prediction_30day.total > avgHistorical ? 'Above Average ✅' : 'Below Average ⚠️';
+                
+                html += `
+                        </div>
+                        <div style="margin-top:1.5rem; padding:1rem; background:#f1f5f9; border-radius:0.5rem; text-align:center;">
+                            <div style="font-size:0.875rem; color:#64748b;">20-Year Average: ${avgHistorical}mm</div>
+                            <div style="font-size:1.25rem; font-weight:700; color:#0099ff; margin-top:0.5rem;">${status}</div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            if (data.recommendations) {
+                html += `
+                    <div style="background:white; padding:2rem; border-radius:1rem; box-shadow:0 2px 8px rgba(0,0,0,0.1);">
+                        <h3 style="color:#0099ff; margin-bottom:1.5rem; font-size:1.25rem;">💡 SMART RECOMMENDATIONS</h3>
+                `;
+                
+                if (data.recommendations.alerts && data.recommendations.alerts.length > 0) {
+                    html += '<div style="margin-bottom:1.5rem;"><h4 style="color:#ef4444; margin-bottom:0.75rem;">⚠️ Alerts</h4>';
+                    data.recommendations.alerts.forEach(alert => {
+                        html += `<div style="padding:0.75rem; background:#fef2f2; border-left:4px solid #ef4444; margin-bottom:0.5rem; border-radius:0.25rem;">${alert}</div>`;
+                    });
+                    html += '</div>';
+                }
+                
+                if (data.recommendations.water_management && data.recommendations.water_management.length > 0) {
+                    html += '<div style="margin-bottom:1.5rem;"><h4 style="color:#0099ff; margin-bottom:0.75rem;">💧 For Water Management</h4>';
+                    data.recommendations.water_management.forEach(rec => {
+                        html += `<div style="padding:0.75rem; background:#f0f9ff; border-left:4px solid #0099ff; margin-bottom:0.5rem; border-radius:0.25rem;">${rec}</div>`;
+                    });
+                    html += '</div>';
+                }
+                
+                if (data.recommendations.farming && data.recommendations.farming.length > 0) {
+                    html += '<div><h4 style="color:#10b981; margin-bottom:0.75rem;">🌾 For Farming</h4>';
+                    data.recommendations.farming.forEach(rec => {
+                        html += `<div style="padding:0.75rem; background:#f0fdf4; border-left:4px solid #10b981; margin-bottom:0.5rem; border-radius:0.25rem;">${rec}</div>`;
+                    });
+                    html += '</div>';
+                }
+                
+                html += '</div>';
+            }
+            
+            content.innerHTML = html;
+        }*/
+        
+        /*function displaySmartForecastResults(data) {
+            const total7day = data.forecast_7day && data.forecast_7day.length > 0 ? data.forecast_7day.reduce((sum, d) => sum + d.rainfall, 0) : 0;
+            const avgHistorical = data.historical && data.historical.length > 0 ? (data.historical.reduce((sum, h) => sum + h.rainfall, 0) / data.historical.length).toFixed(1) : 0;
+            
+            document.getElementById('resultsTitle').textContent = '🤖 Smart Forecast & Prediction';
+            document.getElementById('resultLabel1').textContent = '7-Day Rainfall';
+            document.getElementById('resultLabel2').textContent = '30-Day Prediction';
+            document.getElementById('waterArea').textContent = total7day.toFixed(1) + ' mm';
+            document.getElementById('waterChange').textContent = data.prediction_30day.total + ' mm';
+            document.getElementById('seasonalExtras').style.display = 'block';
+            document.getElementById('droughtLevel').textContent = data.prediction_30day.confidence + '%';
+            document.getElementById('waterStress').textContent = avgHistorical + ' mm (20yr avg)';
+            document.getElementById('results').querySelector('#seasonalExtras .result-item:first-child span:first-child').textContent = 'AI Confidence';
+            document.getElementById('results').querySelector('#seasonalExtras .result-item:last-child span:first-child').textContent = 'Historical Avg';
+            
+            // Add detailed forecast button
+            if (!document.getElementById('detailedForecastBtn')) {
+                const detailBtn = document.createElement('button');
+                detailBtn.id = 'detailedForecastBtn';
+                detailBtn.className = 'btn';
+                detailBtn.style.cssText = 'background: rgba(255,255,255,0.2); color: white; margin-top: 1rem;';
+                detailBtn.innerHTML = '<i class="fas fa-chart-line"></i> View Detailed Forecast';
+                detailBtn.onclick = function() {
+                    document.getElementById('rainfallModal').style.display = 'flex';
+                    displayRainfallForecast(data);
+                };
+                document.getElementById('results').appendChild(detailBtn);
+            }
+        }*/
+        
+        document.getElementById('downloadWaterCSVBtn').addEventListener('click', async function() {
+            if (!timeSeriesData) return;
+            
+            // Create CSV with both NDWI and MNDWI
+            const csvData = {
+                months: timeSeriesData.months,
+                values: timeSeriesData.ndwi,
+                index_name: 'NDWI'
+            };
+            
+            try {
+                const response = await fetch('/download-timeseries-csv/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(csvData)
+                });
+                
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `water_timeseries_${new Date().toISOString().split('T')[0]}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } catch (error) {
+                alert('Error downloading CSV: ' + error.message);
+            }
+        });
+        
+        function createTimeSeriesChart() {
+            // Calculate period averages
+            const period1Months = timeSeriesData.months.slice(0, Math.floor(timeSeriesData.months.length / 2));
+            const period2Months = timeSeriesData.months.slice(Math.floor(timeSeriesData.months.length / 2));
+            
+            const period1NDWI = timeSeriesData.ndwi.slice(0, Math.floor(timeSeriesData.ndwi.length / 2));
+            const period2NDWI = timeSeriesData.ndwi.slice(Math.floor(timeSeriesData.ndwi.length / 2));
+            const period1MNDWI = timeSeriesData.mndwi.slice(0, Math.floor(timeSeriesData.mndwi.length / 2));
+            const period2MNDWI = timeSeriesData.mndwi.slice(Math.floor(timeSeriesData.mndwi.length / 2));
+            
+            const avgP1NDWI = (period1NDWI.reduce((a,b) => a+b, 0) / period1NDWI.length).toFixed(3);
+            const avgP2NDWI = (period2NDWI.reduce((a,b) => a+b, 0) / period2NDWI.length).toFixed(3);
+            const avgP1MNDWI = (period1MNDWI.reduce((a,b) => a+b, 0) / period1MNDWI.length).toFixed(3);
+            const avgP2MNDWI = (period2MNDWI.reduce((a,b) => a+b, 0) / period2MNDWI.length).toFixed(3);
+            
+            // Display period summary
+            document.getElementById('periodSummary').innerHTML = `
+                <div style="padding:1rem; background:white; border-radius:0.5rem; border:2px solid #0066cc;">
+                    <div style="font-weight:600; color:#0066cc; margin-bottom:0.5rem;">Period 1 (${period1Months[0]} to ${period1Months[period1Months.length-1]})</div>
+                    <div style="font-size:0.875rem; color:#374151;">Avg NDWI: <strong>${avgP1NDWI}</strong></div>
+                    <div style="font-size:0.875rem; color:#374151;">Avg MNDWI: <strong>${avgP1MNDWI}</strong></div>
+                </div>
+                <div style="padding:1rem; background:white; border-radius:0.5rem; border:2px solid #00cc66;">
+                    <div style="font-weight:600; color:#00cc66; margin-bottom:0.5rem;">Period 2 (${period2Months[0]} to ${period2Months[period2Months.length-1]})</div>
+                    <div style="font-size:0.875rem; color:#374151;">Avg NDWI: <strong>${avgP2NDWI}</strong></div>
+                    <div style="font-size:0.875rem; color:#374151;">Avg MNDWI: <strong>${avgP2MNDWI}</strong></div>
+                </div>
+            `;
+            
+            const ctx = document.getElementById('timeSeriesChart').getContext('2d');
+            timeSeriesChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: timeSeriesData.months,
+                    datasets: [
+                        {
+                            label: 'NDWI',
+                            data: timeSeriesData.ndwi,
+                            borderColor: '#0066cc',
+                            backgroundColor: 'rgba(0, 102, 204, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        },
+                        {
+                            label: 'MNDWI',
+                            data: timeSeriesData.mndwi,
+                            borderColor: '#00cc66',
+                            backgroundColor: 'rgba(0, 204, 102, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: { display: true, text: 'Water Index Trends', font: { size: 16, weight: 600 } },
+                        legend: { display: true, position: 'top' }
+                    },
+                    scales: {
+                        y: {
+                            title: { display: true, text: 'Water Index Value' },
+                            beginAtZero: true
+                        },
+                        x: {
+                            title: { display: true, text: 'Month' }
+                        }
+                    }
+                }
+            });
+        }
+        
+        document.getElementById('downloadTIFF').addEventListener('click', async function() {
+            const button = this;
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating...';
+            button.disabled = true;
+            
+            try {
+                const response = await fetch('/get-download-urls/', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        roi: currentROI,
+                        analysis_type: 'water',
+                        startDate: document.getElementById('startDate').value || document.getElementById('period1Start').value,
+                        endDate: document.getElementById('endDate').value || document.getElementById('period2End').value
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    window.open(data.tiff_url, '_blank');
+                    alert(`GeoTIFF download started!\nResolution: ${data.resolution}`);
+                } else {
+                    alert('Error: ' + data.error + (data.details ? '\n\nDetails: ' + data.details : ''));
+                }
+            } catch (error) {
+                alert('Network error: ' + error.message);
+            }
+            
+            button.innerHTML = '<i class="fas fa-file-archive"></i> Download GeoTIFF (10m)';
+            button.disabled = false;
+        });
+    </script>
+</body>
+</html>
